@@ -1,10 +1,19 @@
 using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components;
 
 namespace Ti4Companion.Web.Services;
 
 /// <summary>Tiny dependency-free wrapper over the browser's localStorage.</summary>
-public class BrowserStorage(IJSRuntime js)
+public class BrowserStorage(IJSRuntime js, NavigationManager nav)
 {
+    // Three demo phones on one computer must never share a device identity.
+    private string Key(string key)
+    {
+        var uri = new Uri(nav.Uri);
+        var slot = System.Text.RegularExpressions.Regex.Match(uri.Query, @"(?:\?|&)device=([123])(?:&|$)");
+        return uri.AbsolutePath.StartsWith("/table") && slot.Success
+            ? $"prototype.{slot.Groups[1].Value}.{key}" : key;
+    }
     /// <summary>
     /// Read a key, saying whether the READ ITSELF worked. The difference matters for anything that would
     /// otherwise treat "could not read" as "not stored yet" — above all the device token, where that
@@ -13,7 +22,7 @@ public class BrowserStorage(IJSRuntime js)
     /// <returns><c>Ok</c> false means localStorage could not be reached at all; the value is then meaningless.</returns>
     public async ValueTask<(bool Ok, string? Value)> TryGetAsync(string key)
     {
-        try { return (true, await js.InvokeAsync<string?>("localStorage.getItem", key)); }
+        try { return (true, await js.InvokeAsync<string?>("localStorage.getItem", Key(key))); }
         catch { return (false, null); }
     }
 
@@ -25,13 +34,13 @@ public class BrowserStorage(IJSRuntime js)
     /// tell "saved" from "this page load only".</summary>
     public async ValueTask<bool> SetAsync(string key, string value)
     {
-        try { await js.InvokeVoidAsync("localStorage.setItem", key, value); return true; }
+        try { await js.InvokeVoidAsync("localStorage.setItem", Key(key), value); return true; }
         catch { return false; /* storage may be unavailable (private mode) */ }
     }
 
     public async ValueTask RemoveAsync(string key)
     {
-        try { await js.InvokeVoidAsync("localStorage.removeItem", key); }
+        try { await js.InvokeVoidAsync("localStorage.removeItem", Key(key)); }
         catch { /* ignore */ }
     }
 }

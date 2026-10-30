@@ -505,6 +505,16 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
         if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
+        if (session.Name == "Table Prototype")
+        {
+            if (session.Phase != GamePhase.Action || session.SecondaryCardId is not null || session.ActiveStrategyCardId is not null)
+                return Results.BadRequest(new { error = "Finish the current action first." });
+            var owned = session.Players.FirstOrDefault(p => p.Id == session.ActivePlayerId)?.StrategyCards
+                .FirstOrDefault(c => c.StrategyCardId == req.StrategyCardId && !c.IsExhausted);
+            if (owned is null) return Results.BadRequest(new { error = "No unused owned strategy card." });
+            owned.IsExhausted = true;
+            Log(db, session, http, SessionLogKind.StrategyAction, target: session.ActivePlayerId, detail: req.StrategyCardId.ToString());
+        }
         // A new action on the table ends whatever the previous one was still holding: its secondary round and
         // a technology prompt nobody finished. The table has visibly moved on, so neither may keep the clock.
         if (req.StrategyCardId is not null)
@@ -534,6 +544,8 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
         if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
+        if (session.Name == "Table Prototype" && (session.Phase != GamePhase.Action || session.ActiveStrategyCardId is not null || session.SecondaryCardId is not null))
+            return Results.BadRequest(new { error = "Finish primary and secondaries first." });
         var overrides = FactionInitiative.Overrides;
         // Politics used to REFUSE the turn end until the speaker had been appointed. It no longer does (on
         // request, 2026-08-13): the app tracks a game, it does not referee one, and a table that could not
@@ -692,6 +704,9 @@ public static class SessionEndpoints
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
         if (!CallerCanActFor(session, http, playerId)) return Forbidden();
+        if (session.Name == "Table Prototype" && req.Passed &&
+            (session.Phase != GamePhase.Action || session.ActivePlayerId != playerId || session.SecondaryCardId is not null || session.ActiveStrategyCardId is not null))
+            return Results.BadRequest(new { error = "Only the active player may pass after finishing the action." });
 
         if (req.Passed)
         {
@@ -1127,6 +1142,7 @@ public static class SessionEndpoints
         var mayRun = CallerIsHost(session, http)
                      || (caller is not null && caller.Id == (open ? session.SecondaryOwnerId : session.ActivePlayerId));
         if (!mayRun) return Forbidden();
+        if (session.Name == "Table Prototype" && open) return await SaveAndReturn(db, hub, session, ct);
         if (!open)
         {
             if (session.ActiveStrategyCardId is null)
@@ -1136,6 +1152,7 @@ public static class SessionEndpoints
         }
 
         var wanted = (req.PlayerIds ?? Array.Empty<Guid>()).ToHashSet();
+        if (session.Name == "Table Prototype") wanted = session.Players.Select(p => p.Id).ToHashSet();
         // Whether anyone was on the clock BEFORE this call: a round that goes from "someone" to "nobody" is
         // finished, while one that was empty all along has just been opened and is waiting for the answer to
         // "who is taking it?".
@@ -1204,13 +1221,25 @@ public static class SessionEndpoints
         var caller = GetCaller(session, http);
         if (!CallerIsHost(session, http) && caller?.Id != playerId) return Forbidden();
         if (!player.SecondaryPending) return await SaveAndReturn(db, hub, session, ct);   // already done
+        if (session.Name == "Table Prototype")
+        {
+            var seats = session.Players.OrderBy(p => p.SeatOrder).ToList();
+            var start = seats.FindIndex(p => p.Id == session.SecondaryOwnerId);
+            var next = Enumerable.Range(1, seats.Count).Select(i => seats[(Math.Max(start, 0) + i) % seats.Count])
+                .FirstOrDefault(p => p.SecondaryPending);
+            if (next?.Id != playerId) return Results.BadRequest(new { error = "Wait for your clockwise turn." });
+        }
         player.SecondaryPending = false;
         Log(db, session, SessionLogKind.SecondaryDone, caller?.Id, target: playerId,
             detail: session.SecondaryCardId?.ToString());
         // The last one out closes the round, so the popup disappears by itself instead of needing a tap.
         // Through the shared helper, or the round-close log entry would be missing on this path — and that
         // entry is what starts the next player's clock again.
-        if (session.Players.All(p => !p.SecondaryPending)) CloseSecondaries(db, session, caller?.Id);
+        if (session.Players.All(p => !p.SecondaryPending))
+        {
+            CloseSecondaries(db, session, caller?.Id);
+            if (session.Name == "Table Prototype") session.ActiveStrategyCardId = null;
+        }
         NotifyTechPrompt(session, push);
         return await SaveAndReturn(db, hub, session, ct);
     }

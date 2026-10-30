@@ -1,0 +1,27 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TI4 · Drei Plätze, ein Tisch</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#0a121a;color:#edf1e7;font:14px/1.5 system-ui,sans-serif}main{max-width:1300px;margin:auto;padding:32px 28px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}small,.eyebrow{color:#a7bc91;letter-spacing:.16em;font-size:10px}h1{font-size:clamp(26px,4vw,42px);letter-spacing:-.05em;margin:10px 0}p{color:#9aadb8;max-width:760px}button,a{border:1px solid #52634b;background:#c8dfad;color:#1b3029;border-radius:10px;padding:13px 18px;font:650 13px system-ui;cursor:pointer;text-decoration:none}button:disabled{opacity:.4}.devices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:30px}.caption{display:flex;justify-content:space-between;font-size:11px;color:#a6b6bf;margin:0 4px 12px}.phone{background:#111b25;border:5px solid #33404b;border-radius:30px;overflow:hidden;box-shadow:0 15px 40px #0005;height:800px}iframe{border:0;width:100%;height:100%;display:block}footer{margin-top:22px;color:#7f929f;font-size:11px}.notice{padding:12px 0;color:#bad69e;min-height:40px}#single{display:none}@media(max-width:760px){main{padding:24px 16px}header{align-items:start;flex-direction:column}.devices{grid-template-columns:1fr;max-width:420px;margin:24px auto}.phone{height:780px}#single{display:inline-block;margin-top:10px}}</style>
+<main><header><div><div class="eyebrow">TI4 TABLE COMPANION · PROTOTYP 01</div><h1>Drei Plätze. Ein Tisch.</h1><p>Jeder sieht seinen Zug. Alle bleiben im Spiel.<br>Drei getrennte mobile Spielerstationen mit gemeinsamem Spielstand.</p></div><button id="demo">Neuen Demotisch starten ↗</button></header>
+<div id="notice" class="notice" role="status">Demo mit drei Sitzen und je einer Strategiekarte. Zum Erproben des Ablaufs, keine reguläre Drei-Spieler-Partie.</div>
+<a id="single" href="/table">Einzelne Handyansicht öffnen</a><div class="devices" id="devices"></div>
+<footer>Zugfolge → Primary → Secondaries im Uhrzeigersinn → Statusphase · Geräteidentitäten getrennt gespeichert · Kein KI-Dienst erforderlich</footer></main>
+<script>
+const frames=document.querySelector('#devices'),notice=document.querySelector('#notice');
+function show(code){frames.replaceChildren();['Jakob · Sol','Alex · Hacan','Sam · Sardakk'].forEach((name,i)=>{const wrap=document.createElement('section');const label=document.createElement('div');label.className='caption';label.textContent=`0${i+1} / ${name} · ${i===0?'HOST':'SPIELER'}`;const phone=document.createElement('div');phone.className='phone';const frame=document.createElement('iframe');frame.title=`Mobiles Gerät ${i+1}`;frame.src=`/table${code?'/'+encodeURIComponent(code):''}?device=${i+1}`;phone.append(frame);wrap.append(label,phone);frames.append(wrap);});}
+show(localStorage.getItem('prototype.demo.code'));
+document.querySelector('#demo').onclick=async function(){this.disabled=true;notice.textContent='Demotisch wird eingerichtet …';try{
+const tokens=Array.from({length:3},()=>crypto.randomUUID().replaceAll('-',''));
+const call=async(path,body,slot=0,method='POST')=>{const r=await fetch('/api/sessions'+path,{method,headers:{'Content-Type':'application/json','X-Device-Token':tokens[slot]},body:JSON.stringify(body)});if(!r.ok)throw Error(`Einrichtung fehlgeschlagen (${r.status}).`);return r.json();};
+const host=await call('',{name:'Table Prototype',language:1,activeExpansions:1,hostName:'Jakob',factionId:'sol',colorHex:'#90bce0',deviceToken:tokens[0]});const id='/'+host.session.id;
+const two=await call(id+'/players',{name:'Alex',factionId:'hacan',colorHex:'#e4b76f',deviceToken:tokens[1]},1);
+const three=await call(id+'/players',{name:'Sam',factionId:'sardakk',colorHex:'#d59292',deviceToken:tokens[2]},2);
+const players=[host.playerId,two.playerId,three.playerId];
+await call(id,{showTechOverview:false,allowEditAllPlayers:false,strategyCardsPerPlayer:1,promptTechOnAction:false},0,'PATCH');
+await call(id+'/speaker',{playerId:host.playerId});
+for(let i=0;i<3;i++)await call(id+'/players/'+players[i],{isReady:true},i,'PATCH');
+await call(id+'/phase/start',{});
+for(let i=0;i<3;i++)await call(id+'/players/'+players[i]+'/strategy-cards',{strategyCardId:[1,6,7][i]});
+await call(id+'/phase/action',{});
+tokens.forEach((t,i)=>{localStorage.setItem(`prototype.${i+1}.ti4.device`,t);localStorage.setItem(`prototype.${i+1}.ti4.lang`,'De');});
+localStorage.setItem('prototype.demo.code',host.session.joinCode);show(host.session.joinCode);notice.textContent=`Tisch ${host.session.joinCode} ist bereit. Beginne links bei Jakob. Du kannst alle drei Handys bedienen.`;
+}catch(e){notice.textContent=e.message;}finally{this.disabled=false;}};
+</script></html>

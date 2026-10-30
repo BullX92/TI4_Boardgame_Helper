@@ -1,0 +1,19 @@
+@implements IDisposable
+@inject SessionStore Store
+<div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0;font-size:11px;opacity:.85"><span>ZUGZEIT</span><strong style="font:600 24px ui-monospace,monospace;letter-spacing:-.04em">@Elapsed</strong></div>
+@code {
+    [Parameter] public DateTimeOffset EventTime { get; set; }
+    DateTimeOffset? start;
+    DateTimeOffset last;
+    System.Threading.Timer? timer;
+    bool disposed;
+    string Elapsed { get { var t=DateTimeOffset.UtcNow-(start??DateTimeOffset.UtcNow); return $"{Math.Max(0,(int)t.TotalMinutes):00}:{Math.Max(0,t.Seconds):00}"; } }
+    protected override void OnInitialized() => timer = new(_=> { if(!disposed) _ = InvokeAsync(StateHasChanged); },null,1000,1000);
+    protected override async Task OnParametersSetAsync() {
+        if (last==EventTime || Store.Session is not {} s) return;
+        last=EventTime;
+        try { var log=await Store.Api.GetLogAsync(s.JoinCode); start=log.LastOrDefault(e=>e.Kind==SessionLogKind.TurnChange && e.TargetPlayerId==s.ActivePlayerId)?.TimestampUtc; }
+        catch { start=null; }
+    }
+    public void Dispose() { disposed=true; timer?.Dispose(); }
+}
