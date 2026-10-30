@@ -1,0 +1,26 @@
+<img class="faction-art" src="@Source" alt="@Name" loading="lazy" width="80" height="100" />
+
+@code {
+    [Parameter] public string? FactionId { get; set; }
+    [Parameter] public string Name { get; set; } = "Faction artwork";
+
+    // Companion content ids differ from the TI4-Agent asset names for several factions.
+    private static readonly Dictionary<string, string> Images = new()
+    {
+        ["sardakk"] = "sardakk_norr.webp", ["arborec"] = "arborec.webp",
+        ["barony"] = "barony_of_letnev.webp", ["saar"] = "clan_of_saar.webp",
+        ["muaat"] = "muaat.webp", ["hacan"] = "hacan.webp", ["sol"] = "sol.webp",
+        ["ghosts"] = "creuss.webp", ["lizix"] = "l1z1x.webp", ["mentak"] = "mentak.webp",
+        ["naalu"] = "naalu.webp", ["nekro"] = "nekro.webp", ["jolnar"] = "jol-nar.webp",
+        ["winnu"] = "winnu.webp", ["xxcha"] = "xxcha.webp", ["yin"] = "yin.webp",
+        ["yssaril"] = "yssaril.jpeg", ["argent"] = "argent_flight.webp",
+        ["empyrean"] = "empyrean.webp", ["mahact"] = "mahact.webp", ["nra"] = "naaz-rokha.webp",
+        ["nomad"] = "nomad.webp", ["titans"] = "titans_of_ul.webp", ["cabal"] = "vuilraith.webp",
+        ["keleres"] = "keleres.webp", ["bastion"] = "last_bastion.webp",
+        ["crimson"] = "crimson_rebellion.webp", ["deepwrought"] = "deepwrought.webp",
+        ["firmament"] = "firmament.webp", ["obsidian"] = "obsidian.webp",
+        ["lizards"] = "ral_nel_consortium.webp"
+    };
+    private string Source => "/assets/ti4-agent/factions/" +
+        (FactionId is not null && Images.TryGetValue(FactionId, out var file) ? file : "unknown.png");
+}

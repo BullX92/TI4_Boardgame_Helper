@@ -5,18 +5,18 @@
 @inject NavigationManager Nav
 
 <PageTitle>TI4 · Table Companion</PageTitle>
-<main class="table-app" style="--seat:@(Store.Me?.ColorHex ?? "#b7d693")">
-    <header class="table-top"><a href="/prototype.html" target="_top">TI4 <span>TABLE COMPANION</span></a><span class="table-live">@(Store.Connected ? "● Live" : "○ Verbinden")</span></header>
+<main lang="en" class="table-app" style="--seat:@(Store.Me?.ColorHex ?? "#4a90d9")">
+    <header class="table-top"><a href="/prototype.html" target="_top"><img src="/assets/ti4-agent/favicon.svg" width="28" height="28" alt="" /> <span class="table-brand">TI4<span class="brand-agent">-Agent</span><small>TABLE COMPANION</small></span></a><span class="table-live">@(Store.Connected ? "● Live" : "○ Connecting")</span></header>
     @if (error is not null) { <p role="alert" class="table-error">@error</p> }
-    @if (!loaded) { <p class="table-muted">Tisch wird geladen …</p> }
+    @if (!loaded) { <p class="table-muted">Loading your table …</p> }
     else if (Store.Session is not { } s || string.IsNullOrEmpty(Code))
     {
-        <section class="table-hero"><p class="table-kicker">DEIN PLATZ AM TISCH</p><h1>Die Galaxie wartet.</h1><p>Weniger aufs Handy schauen.<br />Mehr Twilight Imperium spielen.</p></section>
-        <section class="table-panel"><label>Dein Name<input @bind="name" maxlength="40" placeholder="Jakob" /></label>
-        <label>Deine Fraktion<select @bind="faction">@foreach (var f in Store.Content?.Factions ?? []) { <option value="@f.Id">@f.NameDe</option> }</select></label>
-        <button class="table-primary" disabled="@busy" @onclick="Create">Tisch erstellen →</button>
-        <div class="table-divider">ODER BEITRETEN</div><label>Spielcode<input @bind="joinCode" maxlength="5" placeholder="ABCDE" /></label><button disabled="@busy" @onclick="Join">Am Tisch Platz nehmen</button></section>
-        <p class="table-foot">Erster Prototyp · Zugfolge · Secondaries · Rundenwechsel</p>
+        <section class="table-hero"><p class="table-kicker">YOUR SEAT AT THE TABLE</p><h1>The galaxy awaits.</h1><p>Less time on your phone.<br />More Twilight Imperium.</p></section>
+        <section class="table-panel"><label>Your name<input @bind="name" maxlength="40" placeholder="Jakob" /></label>
+        <label>Your faction<select @bind="faction">@foreach (var f in Store.Content?.Factions ?? []) { <option value="@f.Id">@f.Name</option> }</select></label>
+        <button class="table-primary" disabled="@busy" @onclick="Create">Create table →</button>
+        <div class="table-divider">OR JOIN A TABLE</div><label>Game code<input @bind="joinCode" maxlength="5" placeholder="ABCDE" /></label><button disabled="@busy" @onclick="Join">Take your seat</button></section>
+        <p class="table-foot">Prototype 01 · Turn order · Secondaries · Round flow</p>
     }
     else
     {
@@ -25,65 +25,65 @@
         var mine = me?.Id == s.ActivePlayerId;
         var order = s.Players.OrderBy(p => p.Initiative ?? 99).ThenBy(p => p.SeatOrder).ToList();
         var secondary = SecondaryPlayer(s);
-        <div class="table-meta"><span>RUNDE @s.CurrentRound</span><span>@Phase(s.Phase)</span><span>@s.JoinCode</span></div>
-        <section class="table-identity"><span class="table-monogram">@(me?.Name.FirstOrDefault().ToString() ?? "?")</span><div><h1>@(me?.Name ?? "Zuschauer")</h1><p>@(Store.Faction(me?.FactionId)?.NameDe ?? "Fraktion auswählen")</p></div><span class="table-initiative">@(me?.Initiative?.ToString() ?? "—")<small>INITIATIVE</small></span></section>
-        @if (me is null) { <p>Du sitzt noch nicht an diesem Tisch.</p><button @onclick="Back">Zum Beitritt</button> }
+        <div class="table-meta"><span>ROUND @s.CurrentRound</span><span>@Phase(s.Phase)</span><span>@s.JoinCode</span></div>
+        <section class="table-identity"><div class="table-portrait"><PrototypeFactionArt FactionId="@me?.FactionId" Name="@(Store.Faction(me?.FactionId)?.Name ?? "Faction artwork")" /></div><div><h1>@(me?.Name ?? "Spectator")</h1><p>@(Store.Faction(me?.FactionId)?.Name ?? "Choose a faction")</p></div><span class="table-initiative">@(me?.Initiative?.ToString() ?? "—")<small>INITIATIVE</small></span></section>
+        @if (me is null) { <p>You have not joined this table yet.</p><button @onclick="Back">Join a table</button> }
         else if (s.Phase == GamePhase.Setup)
         {
-            <section class="table-panel"><p class="table-kicker">ANKOMMEN</p><h2>Alle am Tisch?</h2><p>Die Sitzreihenfolge entspricht der Beitrittsreihenfolge im Uhrzeigersinn. Der Host beginnt als Speaker.</p><button class="table-primary" disabled="@(busy || me.IsReady)" @onclick="Ready">@(me.IsReady ? "✓ Du bist bereit" : "Ich bin bereit")</button>
-            @if (Store.IsHost) { <button disabled="@(busy || s.Players.Count < 2 || s.Players.Any(p => !p.IsReady))" @onclick="Start">Strategiephase starten</button> }</section>
+            <section class="table-panel"><p class="table-kicker">GETTING STARTED</p><h2>Everyone here?</h2><p>Seats run clockwise in join order. The host starts as Speaker.</p><button class="table-primary" disabled="@(busy || me.IsReady)" @onclick="Ready">@(me.IsReady ? "✓ You are ready" : "I am ready")</button>
+            @if (Store.IsHost) { <button disabled="@(busy || s.Players.Count < 2 || s.Players.Any(p => !p.IsReady))" @onclick="Start">Start strategy phase</button> }</section>
         }
         else if (s.Phase == GamePhase.Strategy)
         {
             var picker = Store.PlayerById(Store.CurrentPickerId);
-            <section class="table-panel"><p class="table-kicker">STRATEGIEPHASE</p><h2>@(picker?.Id == me.Id ? "Deine Wahl." : picker is null ? "Der Tisch ist bereit." : $"{picker.Name} wählt.")</h2><p>Strategiekarten am Tisch wählen und hier bestätigen.</p>
+            <section class="table-panel"><p class="table-kicker">STRATEGY PHASE</p><h2>@(picker?.Id == me.Id ? "Your pick." : picker is null ? "The table is ready." : $"{picker.Name} is picking.")</h2><p>Choose strategy cards at the table and confirm them here.</p>
             @if (picker?.Id == me.Id || (Store.IsHost && picker is not null))
-            { <div class="table-card-grid">@foreach (var c in Store.Content?.StrategyCards ?? []) { <button disabled="@(busy || s.Players.Any(p => p.StrategyCards.Any(x => x.StrategyCardId == c.Id)))" @onclick="() => Pick(picker!.Id,c.Id)"><b>@c.Initiative</b> @c.NameDe</button> }</div> }
-            @if (Store.IsHost) { <button class="table-primary" disabled="@(busy || !Store.StrategyPickDone)" @onclick="ActionPhase">Aktionsphase starten →</button> }</section>
+            { <div class="table-card-grid">@foreach (var c in Store.Content?.StrategyCards ?? []) { <button disabled="@(busy || s.Players.Any(p => p.StrategyCards.Any(x => x.StrategyCardId == c.Id)))" @onclick="() => Pick(picker!.Id,c.Id)"><b>@c.Initiative</b> @c.Name</button> }</div> }
+            @if (Store.IsHost) { <button class="table-primary" disabled="@(busy || !Store.StrategyPickDone)" @onclick="ActionPhase">Start action phase →</button> }</section>
         }
         else if (s.Phase == GamePhase.Action)
         {
             @if (s.SecondaryCardId is int sc)
             {
-                <section class="table-focus"><p class="table-kicker">SECONDARY · @Store.Card(sc)?.NameDe</p><h2>@(secondary?.Id == me.Id ? "Möchtest du folgen?" : $"{secondary?.Name} entscheidet.")</h2><p>Im Uhrzeigersinn · auch gepasste Spieler nehmen teil.</p>
+                <section class="table-focus"><p class="table-kicker">SECONDARY · @Store.Card(sc)?.Name</p><h2>@(secondary?.Id == me.Id ? "Will you follow?" : $"{secondary?.Name} is deciding.")</h2><p>Clockwise around the table · passed players can still follow.</p>
                 @if (secondary?.Id == me.Id)
-                { <p class="table-rule">@Store.Card(sc)?.SecondaryTextDe</p>
-                  @if (following) { <button class="table-primary" disabled="@busy" @onclick="SecondaryDone">Secondary abgeschlossen ✓</button> }
-                  else { <button class="table-primary" disabled="@busy" @onclick="() => following = true">Folgen · am Brett ausführen</button><button disabled="@busy" @onclick="SecondaryDone">Auslassen</button> }
+                { <p class="table-rule">@Store.Card(sc)?.SecondaryText</p>
+                  @if (following) { <button class="table-primary" disabled="@busy" @onclick="SecondaryDone">Secondary complete ✓</button> }
+                  else { <button class="table-primary" disabled="@busy" @onclick="() => following = true">Follow · resolve at the table</button><button disabled="@busy" @onclick="SecondaryDone">Skip</button> }
                 }
-                else { <div class="table-wait">◌ Auf Rückmeldung warten</div> }</section>
+                else { <div class="table-wait">◌ Waiting for their decision</div> }</section>
             }
             else if (mine && s.ActiveStrategyCardId is int primary)
-            { <section class="table-focus"><p class="table-kicker">STRATEGIEAKTION</p><h2>@Store.Card(primary)?.NameDe</h2><p class="table-rule">@Store.Card(primary)?.PrimaryTextDe</p><button class="table-primary" disabled="@busy" @onclick="OpenSecondary">Primary abgeschlossen →</button></section> }
+            { <section class="table-focus"><p class="table-kicker">STRATEGY ACTION</p><h2>@Store.Card(primary)?.Name</h2><p class="table-rule">@Store.Card(primary)?.PrimaryText</p><button class="table-primary" disabled="@busy" @onclick="OpenSecondary">Primary complete →</button></section> }
             else
             {
-                <section class="table-focus @(mine ? "is-active" : "")"><p class="table-kicker">@(mine ? "DU BIST DRAN" : me.HasPassed ? "DU HAST GEPASST" : "AM ZUG")</p><h2>@(mine ? "Dein nächster Zug." : active?.Name ?? "Alle haben gepasst.")</h2><p>@(mine ? "Die Galaxie gehört für einen Moment dir." : "Zeit, deinen nächsten Schritt zu planen.")</p>
+                <section class="table-focus @(mine ? "is-active" : "")"><p class="table-kicker">@(mine ? "YOUR TURN" : me.HasPassed ? "YOU HAVE PASSED" : "ON TURN")</p><h2>@(mine ? "Your next move." : active?.Name ?? "Everyone has passed.")</h2><p>@(mine ? "The galaxy is yours for a moment." : "Plan your next move while you wait.")</p>
                 @if (active is not null) { <PrototypeTurnClock EventTime="s.LastActivityUtc" /> }
-                @if (mine) { <button class="table-primary" disabled="@busy" @onclick="Advance">Zug beenden →</button>
-                @foreach (var c in me.StrategyCards.Where(c => !c.IsExhausted)) { <button disabled="@busy" @onclick="() => Play(c.StrategyCardId)">@Store.Card(c.StrategyCardId)?.NameDe spielen</button> }
-                <button class="table-quiet" disabled="@(busy || me.StrategyCards.Any(c => !c.IsExhausted))" @onclick="Pass">Für diese Runde passen</button><small>Erst nach Nutzung aller eigenen Strategiekarten möglich.</small> }
-                else { <div class="table-wait">◌ @(active is null ? "Rundenwechsel steht an" : "Du wirst hier aufgerufen")</div> }
-                @if (active is not null) { var next=NextPlayer(s); <p style="font-size:11px;margin:15px 0 0">Danach: <strong>@(next?.Name ?? "Statusphase")</strong></p> }
+                @if (mine) { <button class="table-primary" disabled="@busy" @onclick="Advance">End turn →</button>
+                @foreach (var c in me.StrategyCards.Where(c => !c.IsExhausted)) { <button disabled="@busy" @onclick="() => Play(c.StrategyCardId)">Play @Store.Card(c.StrategyCardId)?.Name</button> }
+                <button class="table-quiet" disabled="@(busy || me.StrategyCards.Any(c => !c.IsExhausted))" @onclick="Pass">Pass for this round</button><small>Play all your strategy cards before passing.</small> }
+                else { <div class="table-wait">◌ @(active is null ? "Ready for the next phase" : "Your turn will appear here")</div> }
+                @if (active is not null) { var next=NextPlayer(s); <p style="font-size:11px;margin:15px 0 0">Up next: <strong>@(next?.Name ?? "Status phase")</strong></p> }
                 </section>
             }
-            @if (Store.IsHost && s.Players.All(p => p.HasPassed)) { <button class="table-primary" disabled="@busy" @onclick="StatusPhase">Zur Statusphase →</button> }
+            @if (Store.IsHost && s.Players.All(p => p.HasPassed)) { <button class="table-primary" disabled="@busy" @onclick="StatusPhase">Start status phase →</button> }
         }
         else if (s.Phase == GamePhase.Status)
         {
-            <section class="table-panel"><p class="table-kicker">GEMEINSAM AUFRÄUMEN</p>
+            <section class="table-panel"><p class="table-kicker">WRAP UP THE ROUND</p>
             @if (s.StatusStage == StatusStage.Scoring)
-            { <h2>Ziele werten.</h2><p>@(Store.PlayerById(s.StatusScorerId)?.Name ?? "Alle sind fertig") · in Initiativreihenfolge</p><p>Öffentliches und geheimes Ziel am Tisch prüfen und werten.</p>
-            @if (s.StatusScorerId == me.Id) { <button class="table-primary" disabled="@busy" @onclick="ScoreDone">Wertung abgeschlossen</button> }
-            @if (Store.IsHost && s.StatusScorerId is null) { <button class="table-primary" disabled="@busy" @onclick="RevealStage">Weiter zum Aufdecken →</button> } }
+            { <h2>Score objectives.</h2><p>@(Store.PlayerById(s.StatusScorerId)?.Name ?? "Everyone is done") · in initiative order</p><p>Check and score your public and secret objectives at the table.</p>
+            @if (s.StatusScorerId == me.Id) { <button class="table-primary" disabled="@busy" @onclick="ScoreDone">Scoring complete</button> }
+            @if (Store.IsHost && s.StatusScorerId is null) { <button class="table-primary" disabled="@busy" @onclick="RevealStage">Reveal next objective →</button> } }
             else if (s.StatusStage == StatusStage.RevealObjective)
-            { <h2>Neues Ziel aufdecken.</h2><p>Deckt das nächste öffentliche Ziel am Brett auf.</p>@if (Store.IsHost) { <button class="table-primary" disabled="@busy" @onclick="ChecklistStage">Ziel ist aufgedeckt →</button> } }
+            { <h2>Reveal a new objective.</h2><p>Reveal the next public objective at the table.</p>@if (Store.IsHost) { <button class="table-primary" disabled="@busy" @onclick="ChecklistStage">Objective revealed →</button> } }
             else
-            { <h2>Bereit für Runde @(s.CurrentRound + 1)?</h2>@foreach (var step in Steps) { var done = s.StatusStepsDone.HasFlag(step.Item1); <button class="table-check" disabled="@(busy || !Store.IsHost)" @onclick="() => Check(step.Item1,!done)"><span>@(done ? "✓" : "○")</span>@step.Item2</button> }
-              @if (Store.IsHost) { <label class="table-agenda"><input type="checkbox" @bind="agendaDone" /> Agenda nötig? Am Tisch durchführen und hier bestätigen. Ohne Agenda ebenfalls bestätigen.</label><button class="table-primary" disabled="@(busy || !agendaDone || Steps.Any(x => !s.StatusStepsDone.HasFlag(x.Item1)))" @onclick="NextRound">Nächste Runde →</button> } }
+            { <h2>Ready for round @(s.CurrentRound + 1)?</h2>@foreach (var step in Steps) { var done = s.StatusStepsDone.HasFlag(step.Item1); <button class="table-check" disabled="@(busy || !Store.IsHost)" @onclick="() => Check(step.Item1,!done)"><span>@(done ? "✓" : "○")</span>@step.Item2</button> }
+              @if (Store.IsHost) { <label class="table-agenda"><input type="checkbox" @bind="agendaDone" /> Resolve the agenda phase at the table if needed, then confirm. If no agenda is needed, confirm to continue.</label><button class="table-primary" disabled="@(busy || !agendaDone || Steps.Any(x => !s.StatusStepsDone.HasFlag(x.Item1)))" @onclick="NextRound">Next round →</button> } }
             </section>
         }
-        <section class="table-order"><div class="table-section-title"><span>AM TISCH</span><span>@s.Players.Count SPIELER</span></div>@foreach (var p in order) { <div class="table-player @(p.Id == s.ActivePlayerId ? "current" : "")"><i style="background:@p.ColorHex"></i><strong>@p.Name</strong><span>@string.Join(" · ",p.StrategyCards.Select(c => Store.Card(c.StrategyCardId)?.NameDe))</span><b>@(p.HasPassed ? "Pass" : s.Phase == GamePhase.Setup ? p.IsReady ? "✓" : "…" : p.Initiative?.ToString() ?? "—")</b></div> }</section>
-        <footer class="table-foot">Prototyp 01 · @((Device is >=1 and <=3) ? $"Gerät {Device} · " : "")@(Store.IsHost ? "Host" : "Spieler") · Spielstand gespeichert</footer>
+        <section class="table-order"><div class="table-section-title"><span>AT THE TABLE</span><span>@s.Players.Count PLAYERS</span></div>@foreach (var p in order) { <div class="table-player @(p.Id == s.ActivePlayerId ? "current" : "")"><div class="table-mini-portrait" style="border-color:@p.ColorHex"><PrototypeFactionArt FactionId="@p.FactionId" Name="@(Store.Faction(p.FactionId)?.Name ?? "Faction artwork")" /></div><strong>@p.Name</strong><span>@string.Join(" · ",p.StrategyCards.Select(c => Store.Card(c.StrategyCardId)?.Name))</span><b>@(p.HasPassed ? "Pass" : s.Phase == GamePhase.Setup ? p.IsReady ? "✓" : "…" : p.Initiative?.ToString() ?? "—")</b></div> }</section>
+        <footer class="table-foot">Prototype 01 · @((Device is >=1 and <=3) ? $"Device {Device} · " : "")@(Store.IsHost ? "Host" : "Player") · Game saved</footer>
     }
 </main>
 
@@ -92,14 +92,14 @@
     [SupplyParameterFromQuery(Name="device")] public int Device { get; set; }
     string name = "", faction = "sol", joinCode = ""; string? error;
     bool loaded, busy, following, agendaDone;
-    readonly (StatusStep,string)[] Steps = [(StatusStep.DrawActionCards,"Aktionskarten ziehen"),(StatusStep.CommandTokens,"Befehlsmarker entfernen, erhalten & verteilen"),(StatusStep.ReadyCards,"Karten spielbereit machen"),(StatusStep.RepairUnits,"Einheiten reparieren"),(StatusStep.ReturnStrategyCards,"Strategiekarten zurückgeben"),(StatusStep.EndOfStatusAbilities,"Fähigkeiten am Ende der Statusphase prüfen")];
-    protected override async Task OnParametersSetAsync() { try { await Store.InitAsync(); if (!string.IsNullOrEmpty(Code) && !await Store.ConnectAsync(Code)) error="Dieser Tisch wurde nicht gefunden."; loaded=true; } catch { loaded=true; error="Keine Verbindung zum Tisch. Bitte neu laden."; } }
+    readonly (StatusStep,string)[] Steps = [(StatusStep.DrawActionCards,"Draw action cards"),(StatusStep.CommandTokens,"Remove, gain & redistribute command tokens"),(StatusStep.ReadyCards,"Ready cards"),(StatusStep.RepairUnits,"Repair units"),(StatusStep.ReturnStrategyCards,"Return strategy cards"),(StatusStep.EndOfStatusAbilities,"Resolve end-of-status abilities")];
+    protected override async Task OnParametersSetAsync() { try { await Store.InitAsync(); if (!string.IsNullOrEmpty(Code) && !await Store.ConnectAsync(Code)) error="This table could not be found."; Loc.SetLanguage(Language.En); loaded=true; } catch { loaded=true; error="Cannot connect to the table. Please reload."; } }
     void Go(string code) => Nav.NavigateTo($"/table/{code}" + (Device is >=1 and <=3 ? $"?device={Device}" : ""));
     void Back() => Nav.NavigateTo("/table" + (Device is >=1 and <=3 ? $"?device={Device}" : ""));
-    async Task Run(Func<Task> action) { if (busy || !Store.Connected && Store.Session is not null) return; busy=true; error=null; try { await action(); } catch { error="Die Aktion wurde nicht bestätigt. Bitte Spielstand prüfen und erneut versuchen."; } finally { busy=false; } }
-    Task Mutate(Func<Task<SessionStateDto?>> action) => Run(async () => { var result=await action(); if (result is null) { error="Aktion nicht möglich. Der Tisch wurde aktualisiert."; await Store.RefreshAsync(); } else await Store.Mutate(Task.FromResult<SessionStateDto?>(result)); });
-    Task Create() => Run(async () => { var s=await Store.CreateAsync(new("Table Prototype", Language.De, Expansion.Base,name.Length>0?name:"Host",faction,"#90bce0",null)); if(s is not null) Go(s.JoinCode); });
-    Task Join() => Run(async () => { var s=await Store.JoinAsync(joinCode.Trim().ToUpperInvariant(),new(name.Length>0?name:"Spieler",faction,"#e4b76f",null)); if(s is not null) Go(s.JoinCode); else error="Spielcode nicht gefunden."; });
+    async Task Run(Func<Task> action) { if (busy || !Store.Connected && Store.Session is not null) return; busy=true; error=null; try { await action(); } catch { error="The action was not confirmed. Check the table state and try again."; } finally { busy=false; } }
+    Task Mutate(Func<Task<SessionStateDto?>> action) => Run(async () => { var result=await action(); if (result is null) { error="Action unavailable. The table has been updated."; await Store.RefreshAsync(); } else await Store.Mutate(Task.FromResult<SessionStateDto?>(result)); });
+    Task Create() => Run(async () => { var s=await Store.CreateAsync(new("Table Prototype", Language.En, Expansion.Base,name.Length>0?name:"Host",faction,"#90bce0",null)); if(s is not null) Go(s.JoinCode); });
+    Task Join() => Run(async () => { var s=await Store.JoinAsync(joinCode.Trim().ToUpperInvariant(),new(name.Length>0?name:"Player",faction,"#e4b76f",null)); if(s is not null) Go(s.JoinCode); else error="Game code not found."; });
     Guid Id => Store.Session!.Id;
     Task Ready() => Mutate(()=>Store.Api.UpdatePlayerAsync(Id,Store.Me!.Id,new(null,null,null,null,true,null)));
     Task Start() => Run(async()=> { await Store.Mutate(Store.Api.AppointSpeakerAsync(Id,Store.Me!.Id)); await Store.Mutate(Store.Api.StartGameAsync(Id)); });
@@ -118,5 +118,5 @@
     Task NextRound() => Mutate(()=>Store.Api.NextRoundAsync(Id));
     static PlayerDto? SecondaryPlayer(SessionStateDto s) { var seats=s.Players.OrderBy(p=>p.SeatOrder).ToList(); var start=seats.FindIndex(p=>p.Id==s.SecondaryOwnerId); return Enumerable.Range(1,seats.Count).Select(i=>seats[(Math.Max(start,0)+i)%seats.Count]).FirstOrDefault(p=>p.SecondaryPending); }
     static PlayerDto? NextPlayer(SessionStateDto s) { var players=s.Players.Where(p=>!p.HasPassed).OrderBy(p=>p.Initiative??99).ThenBy(p=>p.SeatOrder).ToList(); if(players.Count==0)return null; var index=players.FindIndex(p=>p.Id==s.ActivePlayerId); return players[(index+1)%players.Count]; }
-    static string Phase(GamePhase phase) => phase switch { GamePhase.Setup=>"Vorbereitung",GamePhase.Strategy=>"Strategiephase",GamePhase.Action=>"Aktionsphase",GamePhase.Status=>"Statusphase",_=>"Agenda" };
+    static string Phase(GamePhase phase) => phase switch { GamePhase.Setup=>"Setup",GamePhase.Strategy=>"Strategy phase",GamePhase.Action=>"Action phase",GamePhase.Status=>"Status phase",_=>"Agenda" };
 }

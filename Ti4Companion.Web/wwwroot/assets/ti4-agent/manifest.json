@@ -1,0 +1,134 @@
+{
+  "source": "TI4_AI_Assisstend_Copilot/frontend/public",
+  "visual_reference": "https://ti4-agent.com",
+  "assets": [
+    {
+      "file": "factions/arborec.webp",
+      "sha256": "e29c8566c10da04dcec61079a1fe8edae49d99363b8030551f1f639172bae417"
+    },
+    {
+      "file": "factions/argent_flight.webp",
+      "sha256": "44dd54a7063e2d253db9439ab9030d74494904aedb454f32c98a3aa982b39395"
+    },
+    {
+      "file": "factions/barony_of_letnev.webp",
+      "sha256": "d8be268282f81ed45d5e90d0b0173edeef05fe86a2d558bb0e8c90b6c2c4280b"
+    },
+    {
+      "file": "factions/clan_of_saar.webp",
+      "sha256": "589b56e3cb3898625029e3255216eb24fc0e1f7f489b79af79857656c796783a"
+    },
+    {
+      "file": "factions/creuss.webp",
+      "sha256": "30827c477f08090776c0f04e356405097e8515b06a7ba8b5a2c019d97ddaac61"
+    },
+    {
+      "file": "factions/crimson_rebellion.webp",
+      "sha256": "ba8d1f7cb749b9c9b8109cdd53212690fdac25b76b8226d1a443314de6fab884"
+    },
+    {
+      "file": "factions/deepwrought.webp",
+      "sha256": "f87b1c45a5bac6a6401310175e07d4da963042e51e8c8c67d562120b3e494385"
+    },
+    {
+      "file": "factions/empyrean.webp",
+      "sha256": "e7cb84a826bcb0779b5a9e283f06c3163094b763073021d94997b51714c8bda6"
+    },
+    {
+      "file": "factions/firmament.webp",
+      "sha256": "3bf4e6acb1d4b7d2c83032eba7fe84b890b1905f5a956839333d5c50e6d62943"
+    },
+    {
+      "file": "factions/hacan.webp",
+      "sha256": "08c52a6e034bb6e2d036ec1cdcb39dae7798c33c4c735c17facd11b27322c691"
+    },
+    {
+      "file": "factions/jol-nar.webp",
+      "sha256": "4c7771504abc6208c18c72b8250189f347a44e1f8694ed8e369e4ea390fdf80a"
+    },
+    {
+      "file": "factions/keleres.webp",
+      "sha256": "eaa786313860880cb6de2ecf5cc9891d0b9ea825274797161bee39f426373e70"
+    },
+    {
+      "file": "factions/l1z1x.webp",
+      "sha256": "802bbf9107a65225cf64fc0a1873ad22857b9e0b4fbb2feae20a622c6d1584c6"
+    },
+    {
+      "file": "factions/last_bastion.webp",
+      "sha256": "6cb5e471634d083041fecfbd8ac2644f28f4ddc5f117bd329a02734e919f9f0b"
+    },
+    {
+      "file": "factions/mahact.webp",
+      "sha256": "f6049830edda8c446ac90edbab615479be80df9861d2a73a7fbe103cabdd6d7e"
+    },
+    {
+      "file": "factions/mentak.webp",
+      "sha256": "5d95939b4f8734bd29f48a0c78231ff35219f440d147f32c3a95b56cde7384f0"
+    },
+    {
+      "file": "factions/muaat.webp",
+      "sha256": "ccd164fdad1074bb13300bc7e880313fcdd9bb608e01c3dd25c3b88ff7844562"
+    },
+    {
+      "file": "factions/naalu.webp",
+      "sha256": "12711f3a0446b2fb2362868a6946275aa561d990ccc04eb51bd7b0de2c1a684f"
+    },
+    {
+      "file": "factions/naaz-rokha.webp",
+      "sha256": "7cf8eaf24f5194a87b1cf5b73265cfce1033d0029a1d64957a987fc4d576a389"
+    },
+    {
+      "file": "factions/nekro.webp",
+      "sha256": "0499d568948157d815f0c72a44bf7aaeda36362800b4c138a5907a5395c2f3b9"
+    },
+    {
+      "file": "factions/nomad.webp",
+      "sha256": "1903170c742f910f8d24a2a5e13dbdc885d3484913b7b9250db0b34e27c6eaa3"
+    },
+    {
+      "file": "factions/obsidian.webp",
+      "sha256": "86686cbc77b659f4efa21fdb96055c4360b4f5d2ec102d1aaf0864ee201baa2a"
+    },
+    {
+      "file": "factions/ral_nel_consortium.webp",
+      "sha256": "89ab05d3a39543ea84c50f8ea2e6c68867441f8146ea97997c53e323970d1e30"
+    },
+    {
+      "file": "factions/sardakk_norr.webp",
+      "sha256": "da7d0a8c6f4238c6a09dbf5d7cb67f6dbe498277d39e7cd610ecf43c8a725425"
+    },
+    {
+      "file": "factions/sol.webp",
+      "sha256": "26875fa865472167877739f9f555da5f6f6f66989d08e6d3baf80038294c38a4"
+    },
+    {
+      "file": "factions/titans_of_ul.webp",
+      "sha256": "7ac8294b5cd1034907bb778536fc7849bd55e36f7ebf95ba38a3ebcfb9b6dee2"
+    },
+    {
+      "file": "factions/unknown.png",
+      "sha256": "4b1286486f101645533b89a64569ebcf80c2ad41261fceb0473cfe89bc3b6bd0"
+    },
+    {
+      "file": "factions/vuilraith.webp",
+      "sha256": "43add5f7516c3673338577c57f7b21fe47c1a4682190664e72dfe69221946d65"
+    },
+    {
+      "file": "factions/winnu.webp",
+      "sha256": "5e92b3e91556a81d01635223b174530ea8edaedfaadca4910636ed611a4cb4a1"
+    },
+    {
+      "file": "factions/xxcha.webp",
+      "sha256": "716026d373115d98272e538c88b6d884147ebb01b41977ef37a29934607ff49e"
+    },
+    {
+      "file": "factions/yin.webp",
+      "sha256": "a39f3980ae5c3d0df49f062c7fbc0575809c5003e94bfacd28183054f4633a26"
+    },
+    {
+      "file": "factions/yssaril.jpeg",
+      "sha256": "ae6a0040ff3db0c54d95afbcba5b71e05ac902c498e7c7e034360f454c851909"
+    }
+  ]
+}

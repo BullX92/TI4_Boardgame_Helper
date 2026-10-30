@@ -1,6 +1,6 @@
 @implements IDisposable
 @inject SessionStore Store
-<div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0;font-size:11px;opacity:.85"><span>ZUGZEIT</span><strong style="font:600 24px ui-monospace,monospace;letter-spacing:-.04em">@Elapsed</strong></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0;font-size:11px;opacity:.85"><span>TURN TIME</span><strong style="font:600 24px ui-monospace,monospace;letter-spacing:-.04em">@Elapsed</strong></div>
 @code {
     [Parameter] public DateTimeOffset EventTime { get; set; }
     DateTimeOffset? start;
