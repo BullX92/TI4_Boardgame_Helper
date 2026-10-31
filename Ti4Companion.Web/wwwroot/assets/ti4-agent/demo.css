@@ -16,3 +16,4 @@ iframe{border:0;width:100%;height:100%;display:block}
 footer{margin-top:22px;color:#8b97ac;font-size:11px}
 #single{display:none}
 @media(max-width:760px){main{padding:20px 16px}header{align-items:start;flex-direction:column}.devices{grid-template-columns:1fr;max-width:420px;margin:24px auto;gap:22px}#single{display:inline-block;margin-top:14px}}
+.demo-actions{display:flex;gap:8px;flex-wrap:wrap}.setup-demo{background:#111827;border-color:#374151;color:#d3dfef}

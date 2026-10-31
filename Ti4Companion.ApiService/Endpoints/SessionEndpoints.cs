@@ -1142,6 +1142,8 @@ public static class SessionEndpoints
         var mayRun = CallerIsHost(session, http)
                      || (caller is not null && caller.Id == (open ? session.SecondaryOwnerId : session.ActivePlayerId));
         if (!mayRun) return Forbidden();
+        if (session.Name == "Table Prototype" && session.SpeakerPending)
+            return Results.BadRequest(new { error = "Appoint the new Speaker before finishing the Politics primary." });
         if (session.Name == "Table Prototype" && open) return await SaveAndReturn(db, hub, session, ct);
         if (!open)
         {

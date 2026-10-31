@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TI4 · Three seats, one table</title>
 <link rel="stylesheet" href="/assets/ti4-agent/theme.css"><link rel="icon" href="/assets/ti4-agent/favicon.svg"><link rel="stylesheet" href="/assets/ti4-agent/demo.css">
-<body class="ti4-table-theme"><main><header><div><div class="eyebrow"><img src="/assets/ti4-agent/favicon.svg" width="28" height="28" alt=""> <span>TI4<span class="brand-agent">-Agent</span><small>TABLE COMPANION</small></span></div><h1>Three seats. One table.</h1><p>Your turn, at a glance. Everyone stays in the game.<br>Three personal player stations. One shared game.</p></div><button id="demo">Start new demo table ↗</button></header>
+<body class="ti4-table-theme"><main><header><div><div class="eyebrow"><img src="/assets/ti4-agent/favicon.svg" width="28" height="28" alt=""> <span>TI4<span class="brand-agent">-Agent</span><small>TABLE COMPANION</small></span></div><h1>Three seats. One table.</h1><p>Your turn, at a glance. Everyone stays in the game.<br>Three personal player stations. One shared game.</p></div><div class="demo-actions"><button id="setup" class="setup-demo">Set up demo table</button><button id="demo">Start new demo table ↗</button></div></header>
 <div id="notice" class="notice" role="status">Three demo seats with one strategy card each. Explore the flow; this is not a standard three-player game.</div>
 <a id="single" href="/table">Open a single player view</a><div class="devices" id="devices"></div>
 <footer>Turn order → Primary → Clockwise secondaries → Status phase</footer></main>
@@ -8,7 +8,9 @@
 const frames=document.querySelector('#devices'),notice=document.querySelector('#notice');
 function show(code){frames.replaceChildren();['Jakob · Sol','Alex · Hacan','Sam · Sardakk'].forEach((name,i)=>{const wrap=document.createElement('section');const label=document.createElement('div');label.className='caption';label.textContent=`0${i+1} / ${name} · ${i===0?'HOST':'PLAYER'}`;const phone=document.createElement('div');phone.className='phone';const frame=document.createElement('iframe');frame.title=`Mobile device ${i+1}`;frame.src=`/table${code?'/'+encodeURIComponent(code):''}?device=${i+1}`;phone.append(frame);wrap.append(label,phone);frames.append(wrap);});}
 show(localStorage.getItem('prototype.demo.code'));
-document.querySelector('#demo').onclick=async function(){this.disabled=true;notice.textContent='Setting up your demo table …';try{
+document.querySelector('#demo').onclick=()=>createDemo(false);
+document.querySelector('#setup').onclick=()=>createDemo(true);
+async function createDemo(setupOnly){const controls=[document.querySelector('#demo'),document.querySelector('#setup')];if(controls.some(b=>b.disabled))return;controls.forEach(b=>b.disabled=true);notice.textContent='Setting up your demo table …';try{
 const tokens=Array.from({length:3},()=>crypto.randomUUID().replaceAll('-',''));
 const call=async(path,body,slot=0,method='POST')=>{const r=await fetch('/api/sessions'+path,{method,headers:{'Content-Type':'application/json','X-Device-Token':tokens[slot]},body:JSON.stringify(body)});if(!r.ok)throw Error(`Setup failed (${r.status}).`);return r.json();};
 const host=await call('',{name:'Table Prototype',language:0,activeExpansions:1,hostName:'Jakob',factionId:'sol',colorHex:'#90bce0',deviceToken:tokens[0]});const id='/'+host.session.id;
@@ -16,12 +18,14 @@ const two=await call(id+'/players',{name:'Alex',factionId:'hacan',colorHex:'#e4b
 const three=await call(id+'/players',{name:'Sam',factionId:'sardakk',colorHex:'#d59292',deviceToken:tokens[2]},2);
 const players=[host.playerId,two.playerId,three.playerId];
 await call(id,{showTechOverview:false,allowEditAllPlayers:false,strategyCardsPerPlayer:1,promptTechOnAction:false},0,'PATCH');
+if(!setupOnly){
 await call(id+'/speaker',{playerId:host.playerId});
 for(let i=0;i<3;i++)await call(id+'/players/'+players[i],{isReady:true},i,'PATCH');
 await call(id+'/phase/start',{});
 for(let i=0;i<3;i++)await call(id+'/players/'+players[i]+'/strategy-cards',{strategyCardId:[1,6,7][i]});
 await call(id+'/phase/action',{});
+}
 tokens.forEach((t,i)=>{localStorage.setItem(`prototype.${i+1}.ti4.device`,t);localStorage.setItem(`prototype.${i+1}.ti4.lang`,'En');});
-localStorage.setItem('prototype.demo.code',host.session.joinCode);show(host.session.joinCode);notice.textContent=`Table ${host.session.joinCode} is ready. Start with Jakob on the left. All three player stations are interactive.`;
-}catch(e){notice.textContent=e.message;}finally{this.disabled=false;}};
+localStorage.setItem('prototype.demo.code',host.session.joinCode);show(host.session.joinCode);notice.textContent=setupOnly?`Table ${host.session.joinCode}: arrange the seats, choose the Speaker, then mark all three players ready.`:`Table ${host.session.joinCode} is ready. Start with Jakob on the left. All three player stations are interactive.`;
+}catch(e){notice.textContent=e.message;}finally{controls.forEach(b=>b.disabled=false);}}
 </script></html>

@@ -1,0 +1,35 @@
+@inherits Ti4ComponentBase
+
+@if (Store.Session is { } s && (Store.IsHost || (Politics && Store.MyPlayerId == s.ActivePlayerId)))
+{
+    <label class="speaker-picker">@(Politics ? "Pass the Speaker token" : "Starting Speaker")
+        <select aria-label="@(Politics ? "New Speaker" : "Starting Speaker")" value="@(Politics ? "" : s.SpeakerPlayerId?.ToString())"
+                disabled="@busy" @onchange="Choose">
+            <option value="">Choose a player</option>
+            @foreach (var p in s.Players.OrderBy(p => p.SeatOrder))
+            {
+                <option value="@p.Id" disabled="@(Politics && p.Id == s.SpeakerPlayerId)">@p.Name@(Politics && p.Id == s.SpeakerPlayerId ? " · current Speaker" : "")</option>
+            }
+        </select>
+    </label>
+    @if (error is not null) { <p role="alert">@error</p> }
+}
+
+@code {
+    [Parameter] public bool Politics { get; set; }
+    bool busy;
+    string? error;
+    async Task Choose(ChangeEventArgs args)
+    {
+        if (busy || !Guid.TryParse(args.Value?.ToString(), out var player) || Store.Session is not { } s || s.SpeakerPlayerId == player) return;
+        busy = true; error = null;
+        try
+        {
+            var result = await Store.Api.AppointSpeakerAsync(s.Id, player);
+            if (result is null) { error = "Speaker could not be changed. Please try again."; await Store.RefreshAsync(); }
+            else await Store.Mutate(Task.FromResult<SessionStateDto?>(result));
+        }
+        catch { error = "Could not reach the table. Please try again."; }
+        finally { busy = false; }
+    }
+}

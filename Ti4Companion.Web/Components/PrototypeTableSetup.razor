@@ -1,0 +1,63 @@
+@inherits Ti4ComponentBase
+@inject NavigationManager Nav
+
+@if (Store.Session is { } s && Store.Me is { } me)
+{
+    <section class="setup-panel">
+        <p class="setup-kicker">GETTING STARTED</p><h2>Everyone here?</h2>
+        @if (error is not null) { <p class="setup-error" role="alert">@error</p> }
+        <details class="invite" open="@Store.IsHost">
+            <summary>Invite players · @s.JoinCode</summary>
+            <div class="invite-content"><JoinQr Text="@InviteUrl" SizeCss="7rem" Alt="Scan to join this table" />
+            <div><strong>@s.JoinCode</strong><p>Scan the code or open the invite link.</p><a href="@InviteUrl" target="_blank" rel="noopener">Open invite ↗</a></div></div>
+            @if (new Uri(Nav.BaseUri).IsLoopback) { <p class="local-note">Local preview: this link works on this computer. Use a shared network address for phones.</p> }
+        </details>
+        <div class="seats-heading"><span>CLOCKWISE SEAT ORDER</span><span>@s.Players.Count / 8</span></div>
+        @foreach (var p in s.Players.OrderBy(p => p.SeatOrder))
+        {
+            var seats = s.Players.OrderBy(x => x.SeatOrder).ToList();
+            var index = seats.FindIndex(x => x.Id == p.Id);
+            <div class="setup-seat"><span class="seat-number">@(index + 1)</span><div class="seat-art"><PrototypeFactionArt FactionId="@p.FactionId" Name="@(Store.Faction(p.FactionId)?.Name ?? "Faction artwork")" /></div>
+            <div class="seat-name"><strong>@p.Name</strong><small>@(p.Id == s.SpeakerPlayerId ? "Speaker · " : "")@(p.IsReady ? "Ready" : "Getting ready")</small></div>
+            @if (Store.IsHost)
+            { <div class="seat-move"><button aria-label="Move @p.Name earlier" disabled="@(busy || index == 0)" @onclick="() => Move(p.Id,-1)">↑</button><button aria-label="Move @p.Name later" disabled="@(busy || index == seats.Count - 1)" @onclick="() => Move(p.Id,1)">↓</button></div> }
+            </div>
+        }
+        @if (Store.IsHost) { <PrototypeSpeakerPicker /> }
+        else { <p class="speaker-note">Speaker: @(Store.PlayerById(s.SpeakerPlayerId)?.Name ?? "Waiting for the host")</p> }
+        <button class="ready-button" disabled="@busy" @onclick="() => Ready(!me.IsReady)">@(me.IsReady ? "✓ Ready · tap to undo" : "I am ready")</button>
+        @if (Store.IsHost)
+        { <button class="start-button" disabled="@(busy || s.Players.Count < 2 || s.SpeakerPlayerId is null || s.Players.Any(p => !p.IsReady))" @onclick="Start">Start strategy phase →</button><p class="setup-hint">Choose the Speaker and wait until everyone is ready.</p> }
+        else { <p class="setup-hint">The host starts the round when everyone is ready.</p> }
+    </section>
+}
+
+@code {
+    bool busy;
+    string? error;
+    string InviteUrl => Nav.BaseUri.TrimEnd('/') + "/table?join=" + Uri.EscapeDataString(Store.Session!.JoinCode);
+    async Task Change(Func<Task<SessionStateDto?>> action)
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try
+        {
+            var result = await action();
+            if (result is null) { error = "That change was not confirmed. Please try again."; await Store.RefreshAsync(); }
+            else await Store.Mutate(Task.FromResult<SessionStateDto?>(result));
+        }
+        catch { error = "Cannot reach the table. Please try again."; }
+        finally { busy = false; }
+    }
+    Task Ready(bool ready) => Change(() => Store.Api.UpdatePlayerAsync(Store.Session!.Id, Store.Me!.Id, new(null,null,null,null,ready,null)));
+    Task Start() => Change(() => Store.Api.StartGameAsync(Store.Session!.Id));
+    Task Move(Guid player, int delta)
+    {
+        var s = Store.Session!;
+        var seats = s.Players.OrderBy(p => p.SeatOrder).Select(p => p.Id).ToList();
+        var index = seats.IndexOf(player);
+        if (index < 0 || index + delta < 0 || index + delta >= seats.Count) return Task.CompletedTask;
+        (seats[index], seats[index + delta]) = (seats[index + delta], seats[index]);
+        return Change(() => Store.Api.SetSeatOrderAsync(s.Id, seats));
+    }
+}
