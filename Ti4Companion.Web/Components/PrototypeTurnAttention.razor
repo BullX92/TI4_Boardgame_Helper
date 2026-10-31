@@ -1,0 +1,11 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+<button class="wake-status" @onclick="Enable">@(awake ? "◉ Screen kept awake" : "☼ Keep screen awake")</button>
+@code{
+    [Parameter] public bool Active {get;set;}
+    IJSObjectReference? module; DotNetObjectReference<PrototypeTurnAttention>? callback; bool awake;
+    protected override async Task OnAfterRenderAsync(bool firstRender){try{if(firstRender){module=await JS.InvokeAsync<IJSObjectReference>("import","/prototype-turn-attention.js");callback=DotNetObjectReference.Create(this);await module.InvokeVoidAsync("connect",callback);}if(module is not null)await module.InvokeVoidAsync("update",Active);}catch{}}
+    async Task Enable(){if(module is not null)await module.InvokeVoidAsync("request");}
+    [JSInvokable]public Task WakeChanged(bool value){awake=value;return InvokeAsync(StateHasChanged);}
+    public async ValueTask DisposeAsync(){try{if(module is not null){await module.InvokeVoidAsync("disconnect");await module.DisposeAsync();}}catch{}callback?.Dispose();}
+}

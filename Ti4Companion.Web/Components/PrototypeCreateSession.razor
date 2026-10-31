@@ -1,0 +1,21 @@
+@inherits Ti4ComponentBase
+@inject NavigationManager Nav
+<section class="create-session">
+    <p class="eyebrow">GET YOUR TABLE READY</p><h1>Create a session</h1>
+    <p>Set the player count and names. Everyone chooses their seat and faction after joining.</p>
+    <label>Number of players<select aria-label="Number of players" value="@names.Count" @onchange="Resize">@for(var i=3;i<=8;i++){<option value="@i">@i players</option>}</select></label>
+    <div class="player-names">@for(var i=0;i<names.Count;i++){var seat=i;<label>Player @(i+1)<input aria-label="Player @(i+1) name" value="@names[i]" @oninput="e=>names[seat]=e.Value?.ToString()??string.Empty" placeholder="Name" maxlength="40" /></label>}</div>
+    <p class="card-count">@(names.Count<=4 ? "2 strategy cards each" : "1 strategy card each") · clockwise picks</p>
+    @if(error is not null){<p class="error" role="alert">@error</p>}
+    <button class="primary" disabled="@(busy||!Valid)" @onclick="Create">Create session →</button>
+    <details><summary>Already invited?</summary><label>Session code<input aria-label="Session code" @bind="code" @bind:event="oninput" maxlength="5" /></label><button disabled="@(busy||code.Trim().Length!=5)" @onclick="Join">Choose my player →</button></details>
+</section>
+@code{
+    [Parameter] public int Device {get;set;}
+    List<string> names = ["", "", "", "", "", ""];
+    string code=""; string? error; bool busy;
+    bool Valid=>names.All(n=>!string.IsNullOrWhiteSpace(n)) && names.Select(n=>n.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count()==names.Count;
+    void Resize(ChangeEventArgs e){if(!int.TryParse(e.Value?.ToString(),out var count)||count is <3 or >8)return;while(names.Count<count)names.Add("");if(names.Count>count)names.RemoveRange(count,names.Count-count);}
+    async Task Create(){if(busy||!Valid)return;busy=true;error=null;try{var s=await Store.CreateAsync(new("Table Prototype",Language.En,Expansion.Base,names[0].Trim(),null,"#90bce0",null,names.Select(n=>n.Trim()).ToList()));if(s is null){error="Could not create the session. Please try again.";return;}Nav.NavigateTo($"/table/{s.JoinCode}?choose=true"+(Device is >=1 and <=3?$"&device={Device}":""));}catch{error="Cannot reach the server. Please try again.";}finally{busy=false;}}
+    void Join()=>Nav.NavigateTo("/table?join="+Uri.EscapeDataString(code.Trim().ToUpperInvariant())+(Device is >=1 and <=3?$"&device={Device}":""));
+}

@@ -9,12 +9,24 @@ namespace Ti4Companion.ApiService.Endpoints;
 
 public static class SessionEndpoints
 {
+    // Serialize read/validate/write mutations for each table, including simultaneous seat/card picks.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> TableLocks = new();
     private const Expansion AllExpansions =
         Expansion.Base | Expansion.ProphecyOfKings | Expansion.Codex | Expansion.ThundersEdge;
 
     public static IEndpointRouteBuilder MapSessionEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/sessions");
+        g.AddEndpointFilter(async (context, next) =>
+        {
+            var http = context.HttpContext;
+            if (HttpMethods.IsGet(http.Request.Method) || !Guid.TryParse(http.Request.RouteValues["id"]?.ToString(), out var table))
+                return await next(context);
+            var gate = TableLocks.GetOrAdd(table, _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync(http.RequestAborted);
+            try { return await next(context); }
+            finally { gate.Release(); }
+        });
 
         // ---- Session lifecycle ----
         g.MapPost("/", CreateSession).RequireRateLimiting("session-create");
@@ -149,6 +161,9 @@ public static class SessionEndpoints
 
     private static async Task<IResult> CreateSession(CreateSessionRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, IConfiguration config, CancellationToken ct)
     {
+        var names = req.PlayerNames?.Select(n => Clamp(n ?? "")).ToList();
+        if (names is not null && (names.Count is < 3 or > 8 || names.Any(string.IsNullOrWhiteSpace) || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count))
+            return Results.BadRequest(new { error = "Enter 3–8 unique player names." });
         var deviceToken = string.IsNullOrWhiteSpace(req.DeviceToken) ? Guid.NewGuid().ToString("N") : req.DeviceToken;
         var session = new GameSession
         {
@@ -163,7 +178,7 @@ public static class SessionEndpoints
         var host = new Player
         {
             SessionId = session.Id,
-            Name = string.IsNullOrWhiteSpace(req.HostName) ? "Host" : Clamp(req.HostName),
+            Name = names is not null ? names[0] : string.IsNullOrWhiteSpace(req.HostName) ? "Host" : Clamp(req.HostName),
             FactionId = ClampId(req.FactionId),
             ColorHex = SanitizeColor(req.ColorHex),
             SeatOrder = 0,
@@ -171,6 +186,14 @@ public static class SessionEndpoints
             DeviceToken = deviceToken,
         };
         session.Players.Add(host);
+        if (names is not null)
+        {
+            string[] colors = ["#90bce0", "#e4b76f", "#d59292", "#a6d29a", "#bf9fde", "#83cfce", "#e6cb77", "#d0d5dd"];
+            session.StrategyCardsPerPlayer = 0;
+            session.SpeakerPlayerId = host.Id;
+            for (var i = 1; i < names.Count; i++)
+                session.Players.Add(new Player { SessionId = session.Id, Name = names[i], SeatOrder = i, ColorHex = colors[i] });
+        }
 
         db.Sessions.Add(session);
         Log(db, session, SessionLogKind.PlayerJoin, host.Id, host.Id, detail: "host");
@@ -316,6 +339,8 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
         if (!CallerIsHost(session, http)) return Forbidden();
+        if (session.Name == "Table Prototype" && (session.Players.Count < 3 || session.Players.Any(p => string.IsNullOrEmpty(p.DeviceToken) || string.IsNullOrEmpty(p.FactionId))))
+            return Results.BadRequest(new { error = "Every named player must join and choose a faction first." });
         // Everyone ready is the only gate. The SPEAKER is no longer required here: it is picked (or rolled)
         // in the seat-order dialog, and a table that starts without one settles it during the strategy
         // phase. TurnService already treats a missing speaker as "start at seat 0", so nothing breaks.
@@ -346,7 +371,7 @@ public static class SessionEndpoints
         // table pinned a count) — or the eight cards must be gone, which is the only way a five-player table
         // playing "two each" can ever get here. See GameRules.StrategyPickDone.
         if (!GameRules.StrategyPickDone(session.Players.Select(p => p.StrategyCards.Count).ToList(),
-                                        session.StrategyCardsPerPlayer))
+                                        session.Name == "Table Prototype" ? 0 : session.StrategyCardsPerPlayer))
             return Results.BadRequest(new { error = "All players must pick their strategy card(s) first." });
 
         // Trade goods are settled only now (start of the action phase): each player collects the
@@ -606,6 +631,18 @@ public static class SessionEndpoints
             // can already score and vote. The take-over is logged (SeatClaim) so the table can see it.
             var claimed = session.Players.FirstOrDefault(p => p.Id == claimId);
             if (claimed is null) return Results.NotFound();
+            if (session.Name == "Table Prototype")
+            {
+                if (!string.IsNullOrEmpty(claimed.DeviceToken) && claimed.DeviceToken != deviceToken)
+                    return Results.Conflict(new { error = "That player is already connected on another device." });
+                var previous = session.Players.FirstOrDefault(p => p.DeviceToken == deviceToken);
+                if (previous?.IsHost == true && previous.Id != claimed.Id)
+                {
+                    previous.IsHost = false;
+                    claimed.IsHost = true;
+                    if (session.SpeakerPlayerId == previous.Id) session.SpeakerPlayerId = claimed.Id;
+                }
+            }
             // One device controls one seat: orphan any other player this device currently held.
             // NULL, not a fresh GUID — an unheld seat belongs to no device, and inventing one made it
             // count as a separate device in every statistic that asks COUNT(DISTINCT DeviceToken).
@@ -628,6 +665,8 @@ public static class SessionEndpoints
             }
             else
             {
+                if (session.Name == "Table Prototype" && session.Players.Count >= 3)
+                    return Results.BadRequest(new { error = "Choose one of the named seats instead of adding a player." });
                 // A brand-new seat — capped at 8 players. The join UI hides "create" at 8, so this is
                 // only a backstop (a 400 the client turns into a refresh, never a hard error).
                 if (session.Players.Count >= 8)
@@ -663,11 +702,19 @@ public static class SessionEndpoints
         if (session is null || player is null) return Results.NotFound();
         if (!CallerCanActFor(session, http, playerId)) return Forbidden();           // edit own profile, or host edits anyone
         if (req.SeatOrder is not null && !CallerIsHost(session, http)) return Forbidden(); // seat order = host only
+        if (session.Name == "Table Prototype" && req.FactionId is not null)
+        {
+            if (session.Phase != GamePhase.Setup) return Results.BadRequest(new { error = "Faction selection is closed." });
+            if (!string.IsNullOrWhiteSpace(req.FactionId) && session.Players.Any(p => p.Id != playerId && p.FactionId == req.FactionId))
+                return Results.Conflict(new { error = "That faction is already in use." });
+        }
 
         if (req.Name is not null) player.Name = Clamp(req.Name);
         if (req.ColorHex is not null) player.ColorHex = SanitizeColor(req.ColorHex, player.ColorHex);
         if (req.HasPassed is not null) player.HasPassed = req.HasPassed.Value;
         if (req.IsReady is not null) player.IsReady = req.IsReady.Value;
+        if (session.Name == "Table Prototype" && req.IsReady == true && string.IsNullOrWhiteSpace(req.FactionId ?? player.FactionId))
+            return Results.BadRequest(new { error = "Choose your faction before readying." });
         if (req.SeatOrder is not null) player.SeatOrder = req.SeatOrder.Value;
         if (req.FactionId is not null)
         {
@@ -751,7 +798,14 @@ public static class SessionEndpoints
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
 
-        var maxCards = GameRules.StrategyCardsPerPlayer(session.Players.Count, session.StrategyCardsPerPlayer);
+        var maxCards = MaxCards(session);
+        if (session.Name == "Table Prototype")
+        {
+            if (session.Phase != GamePhase.Strategy || req.StrategyCardId is < 1 or > 8 || TurnService.CurrentPicker(session, maxCards) != playerId)
+                return Results.BadRequest(new { error = "Wait for your strategy pick." });
+            if (session.Players.Any(p => p.StrategyCards.Any(c => c.StrategyCardId == req.StrategyCardId)))
+                return Results.Conflict(new { error = "That strategy card has already been picked." });
+        }
         // Pick order: speaker first, then clockwise by seat. A non-host may only take their own card
         // and only when it's their turn to pick; the host may pick for anyone.
         if (!CallerIsHost(session, http))
@@ -1274,7 +1328,7 @@ public static class SessionEndpoints
 
     /// <summary>The strategy-card allotment for this table: the printed rule unless the host pinned a count.</summary>
     private static int MaxCards(GameSession s)
-        => GameRules.StrategyCardsPerPlayer(s.Players.Count, s.StrategyCardsPerPlayer);
+        => GameRules.StrategyCardsPerPlayer(s.Players.Count, s.Name == "Table Prototype" ? 0 : s.StrategyCardsPerPlayer);
 
     /// <summary>Tell one player that something is waiting for them — a strategy card to pick, a vote to cast,
     /// objectives to score, a technology to record, a secondary to resolve. The phone in a pocket is the whole

@@ -184,7 +184,8 @@ public record PlayerDto(
     /// <summary>Strategy action: this player is taking the secondary and hasn't finished — their clock runs.</summary>
     bool SecondaryPending = false,
     /// <summary>Technology action: this player still owes an entry, so the table's clock stands still.</summary>
-    bool TechPromptPending = false);
+    bool TechPromptPending = false,
+    bool SeatClaimed = false);
 
 /// <summary><paramref name="CustomName"/>/<paramref name="CustomPoints"/> are set for an objective added
 /// by hand (e.g. a secret made public via "Classified Document Leaks") rather than from the content set.</summary>
@@ -310,7 +311,8 @@ public record JoinResultDto(SessionStateDto Session, Guid PlayerId, string Devic
 
 public record CreateSessionRequest(
     string Name, Language Language, Expansion? ActiveExpansions,
-    string HostName, string? FactionId, string? ColorHex, string? DeviceToken);
+    string HostName, string? FactionId, string? ColorHex, string? DeviceToken,
+    IReadOnlyList<string>? PlayerNames = null);
 
 /// <summary>Join a session. With <paramref name="ClaimPlayerId"/> set, take over (claim) that existing
 /// non-host seat instead of creating a new player; otherwise a new player is added (capped at 8).

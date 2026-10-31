@@ -102,7 +102,7 @@ public static class Mapping
                     .Select(c => new PlayerStrategyCardDto(c.StrategyCardId, c.IsExhausted))
                     .ToList(),
                 p.Technologies.Select(t => t.TechnologyId).ToList(),
-                p.Influence, p.StatusDone, p.SecondaryPending, p.TechPromptPending))
+                p.Influence, p.StatusDone, p.SecondaryPending, p.TechPromptPending, !string.IsNullOrEmpty(p.DeviceToken)))
             .ToList();
 
         var objectives = s.Objectives
@@ -152,7 +152,7 @@ public static class Mapping
             s.Id, s.JoinCode, s.Name, s.DefaultLanguage, s.ActiveExpansions,
             s.CurrentRound, s.Phase, s.SpeakerPlayerId, s.ActivePlayerId, s.ActiveStrategyCardId,
             s.CurrentAgendaId, s.AllowEditAllPlayers, s.ShowTechOverview, s.DisplayMode, s.AgendaVotesHidden, s.VotingStarted, s.Paused, s.RetentionHours,
-            s.TurnTimerSeconds, s.StrategyCardsPerPlayer, s.RedTapeVariant, s.RedTapeCardNumber, s.PromptTechOnAction,
+            s.TurnTimerSeconds, s.Name == "Table Prototype" ? 0 : s.StrategyCardsPerPlayer, s.RedTapeVariant, s.RedTapeCardNumber, s.PromptTechOnAction,
             s.TrackSecondaryAbilities,
             s.CreatedAtUtc, s.LastActivityUtc,
             players, objectives, cardStates, votes,

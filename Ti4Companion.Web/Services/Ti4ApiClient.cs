@@ -250,7 +250,7 @@ public class Ti4ApiClient(HttpClient http)
     // rate-limit hit (429) returns null/default so the store refreshes to the authoritative state
     // instead of throwing an unhandled exception into the UI / SignalR callback.
     private static bool IsRejection(HttpResponseMessage r) =>
-        r.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Forbidden
+        r.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Forbidden or HttpStatusCode.Conflict
             or HttpStatusCode.Locked or HttpStatusCode.TooManyRequests; // 423 = paused, 429 = rate-limited
 
     private async Task<T?> PostFor<T>(string url, object? body)

@@ -4,7 +4,13 @@
 @if (Store.Session is { } s && Store.Me is { } me)
 {
     <section class="setup-panel">
-        <p class="setup-kicker">GETTING STARTED</p><h2>Everyone here?</h2>
+        <p class="setup-kicker">YOUR PLAYER · @me.Name</p><h2>Choose your faction</h2>
+        <label class="faction-label">Your faction
+            <select aria-label="Your faction" value="@(me.FactionId??"")" disabled="@(busy||me.IsReady)" @onchange="ChooseFaction">
+                <option value="">Choose a faction</option>
+                @foreach(var f in (Store.Content?.Factions??[]).OrderBy(f=>f.Name)) { <option value="@f.Id" disabled="@(s.Players.Any(p=>p.Id!=me.Id&&p.FactionId==f.Id))">@f.Name</option> }
+            </select>
+        </label>
         @if (error is not null) { <p class="setup-error" role="alert">@error</p> }
         <details class="invite" open="@Store.IsHost">
             <summary>Invite players · @s.JoinCode</summary>
@@ -25,7 +31,7 @@
         }
         @if (Store.IsHost) { <PrototypeSpeakerPicker /> }
         else { <p class="speaker-note">Speaker: @(Store.PlayerById(s.SpeakerPlayerId)?.Name ?? "Waiting for the host")</p> }
-        <button class="ready-button" disabled="@busy" @onclick="() => Ready(!me.IsReady)">@(me.IsReady ? "✓ Ready · tap to undo" : "I am ready")</button>
+        <button class="ready-button" disabled="@(busy||string.IsNullOrWhiteSpace(me.FactionId))" @onclick="() => Ready(!me.IsReady)">@(me.IsReady ? "✓ Ready · tap to undo" : "I am ready")</button>
         @if (Store.IsHost)
         { <button class="start-button" disabled="@(busy || s.Players.Count < 2 || s.SpeakerPlayerId is null || s.Players.Any(p => !p.IsReady))" @onclick="Start">Start strategy phase →</button><p class="setup-hint">Choose the Speaker and wait until everyone is ready.</p> }
         else { <p class="setup-hint">The host starts the round when everyone is ready.</p> }
@@ -50,6 +56,7 @@
         finally { busy = false; }
     }
     Task Ready(bool ready) => Change(() => Store.Api.UpdatePlayerAsync(Store.Session!.Id, Store.Me!.Id, new(null,null,null,null,ready,null)));
+    Task ChooseFaction(ChangeEventArgs e) => Change(() => Store.Api.UpdatePlayerAsync(Store.Session!.Id,Store.Me!.Id,new(null,e.Value?.ToString(),null,null,false,null)));
     Task Start() => Change(() => Store.Api.StartGameAsync(Store.Session!.Id));
     Task Move(Guid player, int delta)
     {
