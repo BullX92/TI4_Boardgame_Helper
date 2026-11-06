@@ -17,7 +17,7 @@ async page => {
         return response.json();
     }
     async function table(count) {
-        const tokens = await page.evaluate(count => Array.from({length: count}, () => crypto.randomUUID().replaceAll('-', '')), count);
+        const tokens = await page.evaluate(count => Array.from({length: count}, () => Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('')), count);
         const names = ['Jakob', 'Alexandra', 'Sam', 'Christine', 'Maximilian', 'Lena', 'Alexander mit langem Spielernamen', 'Ben'].slice(0, count);
         const created = await call('', { name: 'Table Prototype', language: 0, hostName: names[0], playerNames: names, deviceToken: tokens[0] }, tokens[0]);
         let s = created.session;

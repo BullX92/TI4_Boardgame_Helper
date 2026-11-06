@@ -31,15 +31,15 @@ The app requests a Screen Wake Lock where supported, while the page is visible a
 
 ## Implementation and source
 
-- Code: `upstream`, branch `codex/table-prototype`.
+- Code: repository root, branch `main`. In the original local workspace the checkout is in `upstream/`.
 - Original base: `120b0d527ade6f606e402aafa63e92ed0896ae84` from https://github.com/ArcticArt/ti4companion.
 - The existing server owns sessions, seats, factions, initiative, strategy picking, turn flow, persistence and broadcasts. There is no second game engine.
 - Named rosters are created atomically through the existing create-session endpoint. Device assignment and readiness persist in SQLite. Concurrent mutations are serialized per session; duplicate seat/card picks are rejected rather than displacing another player.
 - Prototype rules are scoped to sessions named `Table Prototype`. These sessions always use the normal card count, including saves from the earlier one-card demo.
 - Main view: `Ti4Companion.Web/Pages/TablePrototype.razor`. The right-hand board is `PrototypeStrategyBoard`; creation, setup and screen-attention behavior are separate small components.
 - TI4-Agent source: `C:\00_GIT_Repos\00_TI4_Agent\TI4_AI_Assisstend_Copilot\frontend\public`. The copied assets and checksum manifest are under `wwwroot/assets/ti4-agent`. There are 31 faction portraits and one fallback.
-- `prototype.patch` captures all prototype code and assets relative to the original base. It excludes runtime databases and the existing local changes to `ti4master.db`.
-- Original MIT license and third-party artwork notices remain in the upstream checkout.
+- `prototype.patch` was an early local snapshot. The maintained release is the repository source, including the Docker and OMV configuration.
+- Original MIT license and third-party artwork notices remain in the repository root.
 
 ## Verification — 31 October 2026
 

@@ -124,5 +124,6 @@ def verify():
 if __name__ == "__main__":
     result = verify()
     out = Path(__file__).resolve().parent.parent / "artifacts" / "parallel-undo-checks.json"
+    out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, indent=2))

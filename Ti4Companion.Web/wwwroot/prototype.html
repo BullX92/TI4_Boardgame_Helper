@@ -3,7 +3,7 @@
 <body class="ti4-table-theme"><main><header><div><div class="eyebrow"><img src="/assets/ti4-agent/favicon.svg" width="28" height="28" alt=""> <span>TI4<span class="brand-agent">-Agent</span><small>TABLE COMPANION</small></span></div><h1>Three seats. One table.</h1><p>Your turn, at a glance. Everyone stays in the game.<br>Three personal player stations. One shared game.</p></div><div class="demo-actions"><a href="/table" target="_top">Create session</a><button id="setup" class="setup-demo">Set up demo table</button><button id="demo">Start new demo table ↗</button></div></header>
 <div id="notice" class="notice" role="status">Three player stations · two strategy cards each · shared live session.</div>
 <div class="devices" id="devices"></div>
-<footer>Turn order → Primary → Clockwise secondaries → Status phase</footer></main>
+<footer>Turn order → Primary + parallel secondaries → Status phase</footer></main>
 <script>
 const frames=document.querySelector('#devices'),notice=document.querySelector('#notice');
 function show(code){frames.replaceChildren();['Jakob · Sol','Alex · Hacan','Sam · Sardakk'].forEach((name,i)=>{const wrap=document.createElement('section');const label=document.createElement('div');label.className='caption';label.textContent=`0${i+1} / ${name} · ${i===0?'HOST':'PLAYER'}`;const phone=document.createElement('div');phone.className='phone';const frame=document.createElement('iframe');frame.title=`Mobile device ${i+1}`;frame.allow='screen-wake-lock';frame.src=`/table${code?'/'+encodeURIComponent(code):''}?device=${i+1}`;phone.append(frame);wrap.append(label,phone);frames.append(wrap);});}
@@ -11,7 +11,8 @@ show(localStorage.getItem('prototype.demo.code'));
 document.querySelector('#demo').onclick=()=>createDemo(false);
 document.querySelector('#setup').onclick=()=>createDemo(true);
 async function createDemo(setupOnly){const controls=[document.querySelector('#demo'),document.querySelector('#setup')];if(controls.some(b=>b.disabled))return;controls.forEach(b=>b.disabled=true);notice.textContent='Setting up your demo table …';try{
-const tokens=Array.from({length:3},()=>crypto.randomUUID().replaceAll('-',''));
+// getRandomValues also works on the plain-HTTP LAN address used before setting up a domain.
+const tokens=Array.from({length:3},()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join(''));
 const call=async(path,body,slot=0,method='POST')=>{const r=await fetch('/api/sessions'+path,{method,headers:{'Content-Type':'application/json','X-Device-Token':tokens[slot]},body:JSON.stringify(body)});if(!r.ok)throw Error(`Setup failed (${r.status}).`);return r.json();};
 const host=await call('',{name:'Table Prototype',language:0,activeExpansions:1,hostName:'Jakob',factionId:null,colorHex:'#90bce0',deviceToken:tokens[0],playerNames:['Jakob','Alex','Sam']});const id='/'+host.session.id;
 const players=host.session.players.map(p=>p.id);
