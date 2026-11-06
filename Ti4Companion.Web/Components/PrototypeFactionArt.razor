@@ -1,8 +1,9 @@
-<img class="faction-art" src="@Source" alt="@Name" loading="lazy" width="80" height="100" />
+<img class="faction-art" src="@Source" alt="@Name" loading="@(Eager ? "eager" : "lazy")" width="80" height="100" />
 
 @code {
     [Parameter] public string? FactionId { get; set; }
     [Parameter] public string Name { get; set; } = "Faction artwork";
+    [Parameter] public bool Eager { get; set; }
 
     // Companion content ids differ from the TI4-Agent asset names for several factions.
     private static readonly Dictionary<string, string> Images = new()

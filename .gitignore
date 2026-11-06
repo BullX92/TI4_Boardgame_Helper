@@ -42,6 +42,14 @@ Thumbs.db
 *.log
 _secrets.txt
 _tmp*
+output/
+__pycache__/
+*.pyc
+.dotnet/
+.dotnet-home/
+.nuget/
+.codex/
+.playwright-cli/
 
 # Local-only source assets — kept OUT of the repo (large binaries + licensed/copyrighted material):
 # GIMP card-art templates (~69 MB), commercial fonts (Myriad Pro/Adobe, Handel Gothic),

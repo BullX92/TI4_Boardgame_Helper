@@ -32,3 +32,5 @@ body.ti4-table-theme, body:has(.table-app) {
 button, input, select { touch-action: manipulation; }
 :focus-visible { outline: 2px solid var(--ti4-gold); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+/* Native tools dialogs contain scrolling and focus within the open rail. */
+html:has(.table-tools-dialog[open]),body:has(.table-tools-dialog[open]){overflow:hidden}

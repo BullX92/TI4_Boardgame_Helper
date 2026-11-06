@@ -1,0 +1,4 @@
+.turn-clock{align-self:center;text-align:right;color:#c8d7eb;white-space:nowrap}
+.turn-clock span{display:block;font-size:9px;letter-spacing:.08em;color:#8fa5c0}
+.turn-clock strong{font:650 26px/1.2 ui-monospace,monospace;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+@media(orientation:landscape) and (max-height:500px){.turn-clock strong{font-size:24px}}

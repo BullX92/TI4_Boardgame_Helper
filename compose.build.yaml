@@ -1,0 +1,10 @@
+# Optional alternative: build from a local clone instead of downloading the published image.
+# docker compose -f compose.yaml -f compose.build.yaml up -d --build
+services:
+  web:
+    image: ti4-boardgame-helper:local
+    pull_policy: build
+    build:
+      context: .
+      args:
+        VCS_REF: ${TI4_REVISION:-local}

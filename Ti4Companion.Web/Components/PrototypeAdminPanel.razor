@@ -1,0 +1,53 @@
+@inherits Ti4ComponentBase
+<section class="admin-content" aria-label="Admin controls">
+        <h2>Admin panel</h2><p>Act for a player when their device is unavailable.</p>
+        @if(error is not null){<p class="admin-error" role="alert">@error</p>}
+        @if(Session.Phase == GamePhase.Setup){
+            <h3>Players</h3>
+            @foreach(var p in Session.Players.OrderBy(p=>p.SeatOrder)){
+                <div class="admin-seat" style="--player:@p.ColorHex">
+                    <strong>@p.Name @(p.IsHost ? "· Host" : "")</strong>
+                    <label>Faction<select aria-label="Faction for @p.Name" value="@(p.FactionId??"")" disabled="@busy" @onchange="e=>Faction(p.Id,e)"><option value="">Choose faction</option>@foreach(var f in (Store.Content?.Factions??[]).OrderBy(f=>f.Name)){<option value="@f.Id" disabled="@(Session.Players.Any(x=>x.Id!=p.Id && x.FactionId==f.Id))">@f.Name</option>}</select></label>
+                    <button disabled="@(busy||string.IsNullOrEmpty(p.FactionId))" @onclick="()=>Ready(p)">@(p.IsReady?"Undo ready":"Mark ready")</button>
+                    @if(!p.IsHost){@if(removeId==p.Id){<div class="admin-confirm"><span>Remove @p.Name?</span><button disabled="@busy" @onclick="()=>Remove(p.Id)">Yes, remove</button><button @onclick="()=>removeId=null">Cancel</button></div>}else{<button class="admin-danger" disabled="@busy" @onclick="()=>removeId=p.Id">Remove player</button>}}
+                </div>
+            }
+            @if(Session.Players.Count<8){<div class="admin-add"><h3>Add player</h3><label>Name<input @bind="newName" @bind:event="oninput" maxlength="40" /></label><label>Color<select @bind="newColor"><option value="">Choose color</option>@foreach(var c in Palette.Where(c=>!Session.Players.Any(p=>string.Equals(p.ColorHex,c.Item2,StringComparison.OrdinalIgnoreCase)))){<option value="@c.Item2">@c.Item1</option>}</select></label><button disabled="@(busy||string.IsNullOrWhiteSpace(newName)||string.IsNullOrEmpty(newColor))" @onclick="Add">Add player</button></div>}
+            <p>Players can be added or removed during setup. The host may mark an absent player ready.</p>
+        }
+        else if(Session.Phase == GamePhase.Strategy){
+            var picker=Store.PlayerById(Store.CurrentPickerId);
+            <h3>Strategy pick · @(picker?.Name??"complete")</h3>
+            @if(picker is not null){<div class="admin-cards">@foreach(var card in Store.Content?.StrategyCards??[]){<button disabled="@(busy||Session.Players.Any(p=>p.StrategyCards.Any(c=>c.StrategyCardId==card.Id)))" @onclick="()=>Pick(picker.Id,card.Id)">@card.Initiative · @card.Name</button>}</div>}
+        }
+        else if(Session.Phase == GamePhase.Action){
+            var active=Store.PlayerById(Session.ActivePlayerId);
+            <h3>Current turn · @(active?.Name??"No active player")</h3>
+            @if(Session.ActiveStrategyCardId is not null){<p>Resolve @Store.Card(Session.ActiveStrategyCardId.Value)?.Name at the table.</p>@if(Session.SpeakerPending){<PrototypeSpeakerPicker Politics="true" />}<button disabled="@(busy||Session.SpeakerPending)" @onclick="CompletePrimary">Primary complete →</button>}
+            @if(Session.SecondaryCardId is not null){@foreach(var secondary in Session.Players.Where(p=>p.SecondaryPending).OrderBy(p=>p.SeatOrder)){<p>@secondary.Name: follow or skip at the table.</p><button disabled="@busy" @onclick="()=>SecondaryDone(secondary.Id)">Confirm @secondary.Name's answer</button>}}
+            @if(active is not null && Session.ActiveStrategyCardId is null && Session.SecondaryCardId is null){
+                <button disabled="@busy" @onclick="Advance">End @active.Name's turn →</button>
+                <button disabled="@(busy||active.StrategyCards.Any(c=>!c.IsExhausted))" @onclick="()=>Pass(active.Id)">Pass for @active.Name</button>
+                @foreach(var c in active.StrategyCards.Where(c=>!c.IsExhausted)){<button class="admin-card" style="--card:@CardColor(c.StrategyCardId)" disabled="@busy" @onclick="()=>Play(c.StrategyCardId)">Play @c.StrategyCardId · @Store.Card(c.StrategyCardId)?.Name</button>}
+            }
+        }
+        else if(Session.Phase == GamePhase.Status && Session.StatusStage == StatusStage.Scoring && Session.StatusScorerId is Guid scorer){<h3>Scoring · @Store.PlayerById(scorer)?.Name</h3><button disabled="@busy" @onclick="()=>ScoreDone(scorer)">Scoring complete</button>}
+    </section>
+@code {
+    [Parameter, EditorRequired] public SessionStateDto Session {get;set;} = default!;
+    bool busy; string? error; Guid? removeId; string newName="",newColor="";
+    static readonly (string,string)[] Palette = [("Red","#e53935"),("Blue","#1976d2"),("Green","#43a047"),("Yellow","#fdd835"),("Black","#111827"),("Pink","#ec68a5"),("Orange","#ef8b24"),("Purple","#a64ac9")];
+    static string CardColor(int id) => new[]{"#ef5555","#f49b42","#ead759","#86c853","#34c4b3","#409ada","#a082da","#d469c2"}[Math.Clamp(id-1,0,7)];
+    async Task Change(Func<Task<SessionStateDto?>> action){if(busy)return;busy=true;error=null;try{var result=await action();if(result is null){error="The action was not accepted. Check the current game state.";await Store.RefreshAsync();}else await Store.Mutate(Task.FromResult<SessionStateDto?>(result));}catch{error="Could not reach the table. Please try again.";}finally{busy=false;}}
+    Task Faction(Guid id,ChangeEventArgs e)=>Change(()=>Store.Api.UpdatePlayerAsync(Session.Id,id,new(null,e.Value?.ToString(),null,null,false,null)));
+    Task Ready(PlayerDto p)=>Change(()=>Store.Api.UpdatePlayerAsync(Session.Id,p.Id,new(null,null,null,null,!p.IsReady,null)));
+    async Task Add(){if(busy)return;busy=true;error=null;try{var r=await Store.Api.JoinSessionAsync(Session.Id,new(newName.Trim(),null,newColor,null,null,true));if(r is null){error="Could not add player. Check the name and color.";await Store.RefreshAsync();}else{await Store.Mutate(Task.FromResult<SessionStateDto?>(r.Session));newName="";newColor="";}}catch{error="Could not reach the table.";}finally{busy=false;}}
+    async Task Remove(Guid id){await Change(()=>Store.Api.AdminRemovePlayerAsync(Session.Id,id));removeId=null;}
+    Task Pick(Guid id,int card)=>Change(()=>Store.Api.AssignStrategyCardAsync(Session.Id,id,card));
+    Task Advance()=>Change(()=>Store.Api.AdvanceTurnAsync(Session.Id));
+    Task Pass(Guid id)=>Change(()=>Store.Api.SetPassedAsync(Session.Id,id,true));
+    Task Play(int card)=>Change(()=>Store.Api.SetActiveStrategyAsync(Session.Id,card));
+    Task CompletePrimary()=>Change(()=>Store.Api.CompletePrimaryAsync(Session.Id,Session.ActiveStrategyCardId!.Value,Session.StrategyActionId));
+    Task SecondaryDone(Guid id)=>Change(()=>Store.Api.SetSecondaryDoneAsync(Session.Id,id,Session.StrategyActionId));
+    Task ScoreDone(Guid id)=>Change(()=>Store.Api.SetStatusDoneAsync(Session.Id,id,true));
+}

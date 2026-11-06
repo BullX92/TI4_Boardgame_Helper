@@ -1,0 +1,25 @@
+name: ti4-boardgame-helper
+
+services:
+  web:
+    image: ghcr.io/bullx92/ti4_boardgame_helper:latest
+    restart: unless-stopped
+    ports:
+      - "${TI4_BIND_ADDRESS:-0.0.0.0}:${TI4_PORT:-8092}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TZ: Europe/Berlin
+    volumes:
+      - ti4_data:/data
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  ti4_data:

@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Aspire service defaults (OpenTelemetry, health checks, resilience, service discovery).
 builder.AddServiceDefaults();
 
-// SQLite — local files, no external database process (and no Docker). Two databases:
+// SQLite — local files, no external database process. Docker stores both in /data.
 //  • ti4.db        — runtime session state (Ti4DbContext).
 //  • ti4master.db  — the master reference content (MasterDbContext), bootstrapped once from the JSON.
 var connectionString = builder.Configuration.GetConnectionString("ti4db") ?? "Data Source=ti4.db";
@@ -25,6 +25,14 @@ builder.Services.AddDbContext<MasterDbContext>(options => options.UseSqlite(mast
 
 builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
+
+// A future HTTPS proxy must be trusted explicitly; direct LAN hosting needs no proxy setting.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    foreach (var proxy in builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
+        options.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
+});
 
 // Public-hosting hardening (see DEPLOY.md "Security review"): per-IP rate limits so session
 // creation can't be spammed and join codes can't be enumerated in bulk. Limits are generous —
@@ -90,10 +98,7 @@ using (var scope = app.Services.CreateScope())
 // Behind the reverse proxy (Apache/Caddy on the same box) the client address arrives in
 // X-Forwarded-For; honour it so the per-IP rate limits see real clients, not 127.0.0.1.
 // The defaults only trust loopback proxies, which matches the deployment.
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-});
+app.UseForwardedHeaders();
 app.UseRateLimiter();
 
 app.MapDefaultEndpoints();
@@ -152,6 +157,13 @@ app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
 app.MapGet("/api/ping", () => Results.Ok(new { status = "ok", time = DateTimeOffset.UtcNow }));
+app.MapGet("/api/version", (IConfiguration cfg) => Results.Ok(new
+{
+    revision = cfg["TI4_REVISION"] ?? "development",
+}));
+
+// This fork's website opens the compact table companion immediately.
+app.MapGet("/", () => Results.Redirect("/table"));
 
 // REST API + real-time hub.
 // Who am I? Empty on production, "TEST" on staging (set via Ti4__InstanceLabel in the systemd unit).

@@ -1,12 +1,11 @@
 @inherits Ti4ComponentBase
 @if(Store.Session is {} s){
 <section class="sc-overview" aria-label="Strategy card overview">
-    <div class="board-heading">STRATEGY CARDS</div><div class="board-columns"><span>CARD / PLAYER</span><span>STATE</span></div>
-    @if(s.Players.Any(p=>p.FactionId=="naalu")){var naalu=s.Players.First(p=>p.FactionId=="naalu");<div class="sc-strip naalu" style="--card:#d3d8e1"><div class="sc-face"><div><strong>NAALU</strong><small>@naalu.Name</small></div><b>0</b></div></div>}
+    <div class="board-heading"><span>STRATEGY CARDS</span>@if(s.Players.FirstOrDefault(p=>p.FactionId=="naalu") is {} naalu){<span class="naalu-token" title="Naalu initiative 0 · @naalu.Name">NAALU 0 · @naalu.Name</span>}</div>
     @for(var id=1;id<=8;id++){
         var card=id;var owner=s.Players.FirstOrDefault(p=>p.StrategyCards.Any(c=>c.StrategyCardId==card));var used=owner?.StrategyCards.First(c=>c.StrategyCardId==card).IsExhausted==true;
         <div class="sc-strip @(used?"played":"") @(owner is null?"available":"")" style="--card:@Colors[id-1]" data-card="@id" data-played="@used.ToString().ToLowerInvariant()">
-            <div class="sc-face"><div class="sc-label"><strong>@Labels[id-1]</strong><small>@(owner?.Name??"Not picked")</small></div><div class="sc-number"><b>@id</b><span>@(used?"✓ PLAYED":owner is not null?"PICKED":"—")</span></div></div>
+            <div class="sc-face"><div class="sc-label"><strong>@Labels[id-1]</strong><small class="card-owner">@if(owner is not null){<span class="owner-art" style="border-color:@owner.ColorHex"><PrototypeFactionArt FactionId="@owner.FactionId" Name="@owner.Name" /></span>}<span class="owner-name" title="@(owner?.Name??"Not picked")">@(owner?.Name??"Not picked")</span></small></div><div class="sc-number"><b>@id</b><span>@(used?"✓ PLAYED":owner is not null?"PICKED":"—")</span></div></div>
         </div>
     }
 </section>}

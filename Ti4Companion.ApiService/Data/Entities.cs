@@ -13,6 +13,10 @@ namespace Ti4Companion.ApiService.Data;
 
 public class GameSession
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped] public Guid? UndoActionId { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped] public string? UndoDescription { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped] public string? UndoUnavailableReason { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped] public Guid? StrategyActionId { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public string JoinCode { get; set; } = "";
     public string Name { get; set; } = "";
@@ -177,6 +181,7 @@ public class GameSession
 
 public class Player
 {
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped] public bool SecondaryFollowing { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SessionId { get; set; }
     public GameSession? Session { get; set; }

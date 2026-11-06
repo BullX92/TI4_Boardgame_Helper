@@ -102,7 +102,7 @@ public static class Mapping
                     .Select(c => new PlayerStrategyCardDto(c.StrategyCardId, c.IsExhausted))
                     .ToList(),
                 p.Technologies.Select(t => t.TechnologyId).ToList(),
-                p.Influence, p.StatusDone, p.SecondaryPending, p.TechPromptPending, !string.IsNullOrEmpty(p.DeviceToken)))
+                p.Influence, p.StatusDone, p.SecondaryPending, p.TechPromptPending, !string.IsNullOrEmpty(p.DeviceToken), p.SecondaryFollowing))
             .ToList();
 
         var objectives = s.Objectives
@@ -163,6 +163,7 @@ public static class Mapping
             s.ShowJoinQr, s.StatusStage, s.SecondaryCardId, s.SecondaryOwnerId, s.SpeakerPending,
             s.RedTapeRandomRound, s.RedTapeRandomPendingRound, s.RedTapeRandomRevealedId,
             s.CombatAId, s.CombatBId, s.TechPickPlayerId, s.TechPromptOpen, s.TechPromptOwnerId,
-            s.RedTapeCarrierGoods, s.CustomVoteTitle, s.CustomVoteElect, callerPlayerId);
+            s.RedTapeCarrierGoods, s.CustomVoteTitle, s.CustomVoteElect, callerPlayerId,
+            s.UndoActionId, s.UndoDescription, s.UndoUnavailableReason, s.StrategyActionId);
     }
 }

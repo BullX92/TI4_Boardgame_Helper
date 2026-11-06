@@ -66,6 +66,8 @@ public static class SessionEndpoints
 
         // ---- Turn ----
         g.MapPost("/{id:guid}/active-strategy", SetActiveStrategy);
+        g.MapPost("/{id:guid}/primary/complete", CompletePrimary);
+        g.MapPost("/{id:guid}/undo", UndoOwnAction);
         g.MapPost("/{id:guid}/turn/active", SetActivePlayer);
         g.MapPost("/{id:guid}/turn/advance", AdvanceTurn);
         g.MapPost("/{id:guid}/turn/previous", PreviousTurn);
@@ -96,6 +98,7 @@ public static class SessionEndpoints
         g.MapPost("/{id:guid}/combat/end", EndCombat);
         g.MapPost("/{id:guid}/archive", ArchiveSession);
         g.MapPost("/{id:guid}/players/{playerId:guid}/secondary-done", SetSecondaryDone);
+        g.MapPost("/{id:guid}/players/{playerId:guid}/secondary-follow", FollowSecondary);
         g.MapPost("/{id:guid}/players/{playerId:guid}/time-up", ReportTimeUp);
         g.MapPost("/{id:guid}/push", SubscribePush);
         // POST, not DELETE: minimal APIs refuse an inferred body on DELETE ("Body was inferred but the
@@ -164,6 +167,9 @@ public static class SessionEndpoints
         var names = req.PlayerNames?.Select(n => Clamp(n ?? "")).ToList();
         if (names is not null && (names.Count is < 3 or > 8 || names.Any(string.IsNullOrWhiteSpace) || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count))
             return Results.BadRequest(new { error = "Enter 3–8 unique player names." });
+        string[] palette = ["#e53935", "#1976d2", "#43a047", "#fdd835", "#111827", "#ec68a5", "#ef8b24", "#a64ac9"];
+        if (req.PlayerColors is not null && (names is null || req.PlayerColors.Count != names.Count || req.PlayerColors.Any(c => !palette.Contains(c, StringComparer.OrdinalIgnoreCase)) || req.PlayerColors.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count))
+            return Results.BadRequest(new { error = "Choose a different player color for each seat." });
         var deviceToken = string.IsNullOrWhiteSpace(req.DeviceToken) ? Guid.NewGuid().ToString("N") : req.DeviceToken;
         var session = new GameSession
         {
@@ -180,7 +186,7 @@ public static class SessionEndpoints
             SessionId = session.Id,
             Name = names is not null ? names[0] : string.IsNullOrWhiteSpace(req.HostName) ? "Host" : Clamp(req.HostName),
             FactionId = ClampId(req.FactionId),
-            ColorHex = SanitizeColor(req.ColorHex),
+            ColorHex = req.PlayerColors?[0] ?? SanitizeColor(req.ColorHex),
             SeatOrder = 0,
             IsHost = true,
             DeviceToken = deviceToken,
@@ -192,7 +198,7 @@ public static class SessionEndpoints
             session.StrategyCardsPerPlayer = 0;
             session.SpeakerPlayerId = host.Id;
             for (var i = 1; i < names.Count; i++)
-                session.Players.Add(new Player { SessionId = session.Id, Name = names[i], SeatOrder = i, ColorHex = colors[i] });
+                session.Players.Add(new Player { SessionId = session.Id, Name = names[i], SeatOrder = i, ColorHex = req.PlayerColors?[i] ?? colors[i] });
         }
 
         db.Sessions.Add(session);
@@ -211,6 +217,7 @@ public static class SessionEndpoints
         var overrides = FactionInitiative.Overrides;
         // The one response that says which seat the asking device holds. It is how a device learns that its
         // seat has been taken over — see SessionStateDto.CallerPlayerId.
+        await PrototypeActionHistory.DescribeAsync(db, session, ct);
         return Results.Ok(session.ToDto(overrides, GetCaller(session, http)?.Id));
     }
 
@@ -221,7 +228,7 @@ public static class SessionEndpoints
         if (session is null) return Results.NotFound();
         // SQLite can't ORDER BY a DateTimeOffset in SQL, so sort in memory (as the cleanup worker does).
         var rows = await db.SessionLog.AsNoTracking()
-            .Where(l => l.SessionId == session.Id)
+            .Where(l => l.SessionId == session.Id && l.Kind != SessionLogKind.PrototypeCheckpoint)
             .ToListAsync(ct);
         return Results.Ok(rows.OrderBy(l => l.TimestampUtc).Select(l => l.ToDto()).ToList());
     }
@@ -339,8 +346,8 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
         if (!CallerIsHost(session, http)) return Forbidden();
-        if (session.Name == "Table Prototype" && (session.Players.Count < 3 || session.Players.Any(p => string.IsNullOrEmpty(p.DeviceToken) || string.IsNullOrEmpty(p.FactionId))))
-            return Results.BadRequest(new { error = "Every named player must join and choose a faction first." });
+        if (session.Name == "Table Prototype" && (session.Players.Count < 3 || session.Players.Any(p => string.IsNullOrEmpty(p.FactionId))))
+            return Results.BadRequest(new { error = "Every player needs a faction before starting." });
         // Everyone ready is the only gate. The SPEAKER is no longer required here: it is picked (or rolled)
         // in the seat-order dialog, and a table that starts without one settles it during the strategy
         // phase. TurnService already treats a missing speaker as "start at seat 0", so nothing breaks.
@@ -525,7 +532,7 @@ public static class SessionEndpoints
     // Turn
     // -----------------------------------------------------------------------
 
-    private static async Task<IResult> SetActiveStrategy(Guid id, SetActiveStrategyCardRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> SetActiveStrategy(Guid id, SetActiveStrategyCardRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, PushService push, CancellationToken ct)
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
@@ -537,6 +544,7 @@ public static class SessionEndpoints
             var owned = session.Players.FirstOrDefault(p => p.Id == session.ActivePlayerId)?.StrategyCards
                 .FirstOrDefault(c => c.StrategyCardId == req.StrategyCardId && !c.IsExhausted);
             if (owned is null) return Results.BadRequest(new { error = "No unused owned strategy card." });
+            PrototypeActionHistory.Begin(db, session, session.ActivePlayerId, $"Play strategy card {req.StrategyCardId}");
             owned.IsExhausted = true;
             Log(db, session, http, SessionLogKind.StrategyAction, target: session.ActivePlayerId, detail: req.StrategyCardId.ToString());
         }
@@ -551,6 +559,54 @@ public static class SessionEndpoints
         // Politics: the appointment is the card. Playing it arms the block on ending the turn; taking the
         // card back off the table (↺ "not done") disarms it again.
         session.SpeakerPending = req.StrategyCardId == GameRules.PoliticsStrategyCard;
+        if (session.Name == "Table Prototype" && req.StrategyCardId is int card)
+        {
+            session.SecondaryCardId = card;
+            session.SecondaryOwnerId = session.ActivePlayerId;
+            Log(db, session, SessionLogKind.SecondaryRoundOpen, GetCaller(session, http)?.Id, detail: card.ToString());
+            foreach (var p in session.Players.Where(p => p.Id != session.ActivePlayerId))
+            {
+                p.SecondaryPending = true;
+                Log(db, session, SessionLogKind.SecondaryStart, GetCaller(session, http)?.Id, target: p.Id, detail: card.ToString());
+                NotifyAction(session, push, p.Id, PushAction.Secondary);
+            }
+        }
+        return await SaveAndReturn(db, hub, session, ct);
+    }
+
+    private static async Task<IResult> CompletePrimary(Guid id, CompletePrimaryRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
+    {
+        var session = await LoadGraphAsync(db, id, ct);
+        if (session is null) return Results.NotFound();
+        if (req.ActionId is Guid action && action != await PrototypeActionHistory.CurrentStrategyActionAsync(db, session, ct))
+            return Results.Conflict(new { error = "The strategy action changed." });
+        return await CompletePrototypePrimary(session, req.StrategyCardId, db, hub, http, ct);
+    }
+
+    private static async Task<IResult> CompletePrototypePrimary(GameSession session, int? expectedCard, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
+    {
+        if (session.Name != "Table Prototype" || session.Phase != GamePhase.Action) return Results.BadRequest();
+        if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
+        if (session.SpeakerPending) return Results.BadRequest(new { error = "Appoint the new Speaker before finishing the Politics primary." });
+        if (session.ActiveStrategyCardId is null) return await SaveAndReturn(db, hub, session, ct);
+        if (session.ActiveStrategyCardId != expectedCard) return Results.Conflict(new { error = "The running strategy card changed." });
+        PrototypeActionHistory.Begin(db, session, session.ActivePlayerId, "Complete primary");
+        var card = session.ActiveStrategyCardId.Value;
+        session.ActiveStrategyCardId = null;
+        if (card == GameRules.TechnologyStrategyCard && session.SecondaryCardId is null && session.PromptTechOnAction)
+            RaiseTechPrompt(db, session, session.ActivePlayerId, card);
+        return await SaveAndReturn(db, hub, session, ct);
+    }
+
+    private static async Task<IResult> UndoOwnAction(Guid id, UndoOwnActionRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
+    {
+        var session = await LoadGraphAsync(db, id, ct);
+        if (session is null) return Results.NotFound();
+        var caller = GetCaller(session, http);
+        if (caller is null || caller.Id != session.ActivePlayerId) return Forbidden();
+        if (!req.Confirmed) return Results.BadRequest(new { error = "Confirm Undo first." });
+        if (!await PrototypeActionHistory.UndoAsync(db, session, req.ActionId, ct))
+            return Results.Conflict(new { error = "This action is no longer undoable. Other players' decisions are preserved." });
         return await SaveAndReturn(db, hub, session, ct);
     }
 
@@ -571,6 +627,7 @@ public static class SessionEndpoints
         if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
         if (session.Name == "Table Prototype" && (session.Phase != GamePhase.Action || session.ActiveStrategyCardId is not null || session.SecondaryCardId is not null))
             return Results.BadRequest(new { error = "Finish primary and secondaries first." });
+        PrototypeActionHistory.Begin(db, session, session.ActivePlayerId, "End turn");
         var overrides = FactionInitiative.Overrides;
         // Politics used to REFUSE the turn end until the speaker had been appointed. It no longer does (on
         // request, 2026-08-13): the app tracks a game, it does not referee one, and a table that could not
@@ -614,7 +671,7 @@ public static class SessionEndpoints
     // Players
     // -----------------------------------------------------------------------
 
-    private static async Task<IResult> JoinSession(Guid id, JoinSessionRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, CancellationToken ct)
+    private static async Task<IResult> JoinSession(Guid id, JoinSessionRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
@@ -665,8 +722,15 @@ public static class SessionEndpoints
             }
             else
             {
-                if (session.Name == "Table Prototype" && session.Players.Count >= 3)
-                    return Results.BadRequest(new { error = "Choose one of the named seats instead of adding a player." });
+                if (session.Name == "Table Prototype")
+                {
+                    if (!req.Unclaimed || !CallerIsHost(session, http)) return Forbidden();
+                    if (session.Phase != GamePhase.Setup) return Results.BadRequest(new { error = "Players can be added during setup only." });
+                    if (string.IsNullOrWhiteSpace(req.Name) || session.Players.Any(p => p.Name.Equals(req.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+                        return Results.BadRequest(new { error = "Enter a unique player name." });
+                    if (req.ColorHex is null || session.Players.Any(p => p.ColorHex.Equals(req.ColorHex, StringComparison.OrdinalIgnoreCase)))
+                        return Results.BadRequest(new { error = "Choose an unused player color." });
+                }
                 // A brand-new seat — capped at 8 players. The join UI hides "create" at 8, so this is
                 // only a backstop (a 400 the client turns into a refresh, never a hard error).
                 if (session.Players.Count >= 8)
@@ -737,6 +801,11 @@ public static class SessionEndpoints
         if (session is null || player is null) return Results.NotFound();
         // Host removes anyone; a non-host may remove only themselves (leave).
         if (!CallerCanActFor(session, http, playerId)) return Forbidden();
+        if (session.Name == "Table Prototype")
+        {
+            if (!CallerIsHost(session, http)) return Forbidden();
+            if (session.Phase != GamePhase.Setup || player.IsHost) return Results.BadRequest(new { error = "Only non-host players can be removed during setup." });
+        }
 
         session.Players.Remove(player);
         if (session.ActivePlayerId == playerId) session.ActivePlayerId = null;
@@ -760,6 +829,7 @@ public static class SessionEndpoints
             // A player may only pass once they have performed all of their strategy actions.
             if (player.StrategyCards.Count > 0 && player.StrategyCards.Any(c => !c.IsExhausted))
                 return Results.BadRequest(new { error = "Play all strategy actions before passing." });
+            PrototypeActionHistory.Begin(db, session, playerId, "Pass");
             // The turn ends here too, so a Politics appointment nobody made stops being pending (it is a
             // reminder, not a gate — see AdvanceTurn).
             if (playerId == session.ActivePlayerId) session.SpeakerPending = false;
@@ -1058,6 +1128,7 @@ public static class SessionEndpoints
         // The card reads "choose a player other than the speaker", so the token has to move.
         if (session.SpeakerPlayerId == req.PlayerId)
             return Results.BadRequest(new { error = "Choose a player other than the current speaker." });
+        PrototypeActionHistory.Begin(db, session, session.ActivePlayerId, "Appoint Speaker");
         session.SpeakerPlayerId = req.PlayerId;
         session.SpeakerPending = false;   // the appointment is done — the turn may end
         Log(db, session, SessionLogKind.SpeakerSet, caller?.Id, target: req.PlayerId);
@@ -1191,14 +1262,13 @@ public static class SessionEndpoints
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
+        if (session.Name == "Table Prototype")
+            return await CompletePrototypePrimary(session, session.ActiveStrategyCardId, db, hub, http, ct);
         var caller = GetCaller(session, http);
         var open = session.SecondaryCardId is not null;
         var mayRun = CallerIsHost(session, http)
                      || (caller is not null && caller.Id == (open ? session.SecondaryOwnerId : session.ActivePlayerId));
         if (!mayRun) return Forbidden();
-        if (session.Name == "Table Prototype" && session.SpeakerPending)
-            return Results.BadRequest(new { error = "Appoint the new Speaker before finishing the Politics primary." });
-        if (session.Name == "Table Prototype" && open) return await SaveAndReturn(db, hub, session, ct);
         if (!open)
         {
             if (session.ActiveStrategyCardId is null)
@@ -1208,7 +1278,6 @@ public static class SessionEndpoints
         }
 
         var wanted = (req.PlayerIds ?? Array.Empty<Guid>()).ToHashSet();
-        if (session.Name == "Table Prototype") wanted = session.Players.Select(p => p.Id).ToHashSet();
         // Whether anyone was on the clock BEFORE this call: a round that goes from "someone" to "nobody" is
         // finished, while one that was empty all along has just been opened and is waiting for the answer to
         // "who is taking it?".
@@ -1268,23 +1337,33 @@ public static class SessionEndpoints
     }
 
     // "Done" for one player's secondary — stops their clock. Self or host: it is their own time.
-    private static async Task<IResult> SetSecondaryDone(Guid id, Guid playerId, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, PushService push, CancellationToken ct)
+    private static async Task<IResult> FollowSecondary(Guid id, Guid playerId, CompleteSecondaryRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
+        if (!CallerCanActFor(session, http, playerId)) return Forbidden();
+        if (session.Name != "Table Prototype" || session.Phase != GamePhase.Action) return Results.BadRequest();
+        await PrototypeActionHistory.LoadFollowingAsync(db, session, ct);
+        if (req.ActionId is not Guid action || session.StrategyActionId != action)
+            return Results.Conflict(new { error = "The strategy action changed." });
+        var player = session.Players.FirstOrDefault(p => p.Id == playerId);
+        if (player is null || !player.SecondaryPending) return Results.BadRequest();
+        if (!player.SecondaryFollowing)
+            Log(db, session, SessionLogKind.SecondaryFollow, GetCaller(session, http)?.Id, target: playerId, detail: action.ToString());
+        return await SaveAndReturn(db, hub, session, ct);
+    }
+
+    private static async Task<IResult> SetSecondaryDone(Guid id, Guid playerId, CompleteSecondaryRequest req, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, PushService push, CancellationToken ct)
+    {
+        var session = await LoadGraphAsync(db, id, ct);
+        if (session is null) return Results.NotFound();
+        if (req.ActionId is Guid action && action != await PrototypeActionHistory.CurrentStrategyActionAsync(db, session, ct))
+            return Results.Conflict(new { error = "The strategy action changed." });
         var player = session.Players.FirstOrDefault(p => p.Id == playerId);
         if (player is null) return Results.NotFound();
         var caller = GetCaller(session, http);
         if (!CallerIsHost(session, http) && caller?.Id != playerId) return Forbidden();
         if (!player.SecondaryPending) return await SaveAndReturn(db, hub, session, ct);   // already done
-        if (session.Name == "Table Prototype")
-        {
-            var seats = session.Players.OrderBy(p => p.SeatOrder).ToList();
-            var start = seats.FindIndex(p => p.Id == session.SecondaryOwnerId);
-            var next = Enumerable.Range(1, seats.Count).Select(i => seats[(Math.Max(start, 0) + i) % seats.Count])
-                .FirstOrDefault(p => p.SecondaryPending);
-            if (next?.Id != playerId) return Results.BadRequest(new { error = "Wait for your clockwise turn." });
-        }
         player.SecondaryPending = false;
         Log(db, session, SessionLogKind.SecondaryDone, caller?.Id, target: playerId,
             detail: session.SecondaryCardId?.ToString());
@@ -1294,7 +1373,6 @@ public static class SessionEndpoints
         if (session.Players.All(p => !p.SecondaryPending))
         {
             CloseSecondaries(db, session, caller?.Id);
-            if (session.Name == "Table Prototype") session.ActiveStrategyCardId = null;
         }
         NotifyTechPrompt(session, push);
         return await SaveAndReturn(db, hub, session, ct);
@@ -1319,7 +1397,8 @@ public static class SessionEndpoints
             // record what it researched — the primary player and the secondaries alike. Asking while the
             // action was still being played (the old band in ActionView) came too early for everyone but
             // the player holding the card.
-            if (closing == GameRules.TechnologyStrategyCard && session.PromptTechOnAction)
+            if (closing == GameRules.TechnologyStrategyCard && session.PromptTechOnAction
+                && (session.Name != "Table Prototype" || session.ActiveStrategyCardId is null))
                 RaiseTechPrompt(db, session, session.SecondaryOwnerId, closing);
         }
         session.SecondaryCardId = null;
@@ -1919,7 +1998,9 @@ public static class SessionEndpoints
     private static async Task<IResult> SaveAndReturn(Ti4DbContext db, IHubContext<SessionHub> hub, GameSession session, CancellationToken ct, IReadOnlyDictionary<string, int?>? overrides = null)
     {
         session.LastActivityUtc = DateTimeOffset.UtcNow;
+        await PrototypeActionHistory.CompleteAsync(db, session, ct);
         await db.SaveChangesAsync(ct);
+        await PrototypeActionHistory.DescribeAsync(db, session, ct);
         await hub.NotifySessionChanged(session.JoinCode);
         overrides ??= FactionInitiative.Overrides;
         return Results.Ok(session.ToDto(overrides));

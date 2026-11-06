@@ -1,0 +1,91 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject SessionStore Store
+
+@{
+    var ordered = Session.Players.OrderBy(p => p.Initiative ?? 99).ThenBy(p => p.SeatOrder).ToList();
+    var remaining = ordered.Where(p => !p.HasPassed).ToList();
+    var focusIndex = remaining.FindIndex(p => p.Id == FocusPlayerId);
+    var queue = focusIndex >= 0
+        ? remaining.Skip(focusIndex).Concat(remaining.Take(focusIndex)).ToList()
+        : Session.Phase == GamePhase.Action ? [] : remaining;
+    var ranks = queue.Select((p, i) => (p.Id, Rank: i)).ToDictionary(x => x.Id, x => x.Rank);
+    var current = queue.FirstOrDefault();
+    var next = queue.Skip(1).FirstOrDefault();
+}
+<section @ref="element" class="initiative-list initiative-wheel" aria-label="Initiative order"
+         data-focus-player="@FocusPlayerId" data-phase="@Session.Phase"
+         data-depth="1.3" data-duration="1800" data-glow="0.35" data-original-colors="80">
+    <div class="wheel-heading">INITIATIVE ORDER</div>
+    <details class="wheel-roster">
+        <summary aria-label="All players in initiative order">@ordered.Count PLAYERS <span aria-hidden="true">⌄</span></summary>
+        <div class="wheel-roster-list">
+            @foreach (var p in ordered)
+            {
+                <div class="init-player @(p.Id == FocusPlayerId ? "current" : "") @(p.HasPassed ? "passed" : "")">
+                    <b>@(p.Initiative?.ToString() ?? "—")</b>
+                    <span class="roster-art" style="border-color:@p.ColorHex"><PrototypeFactionArt FactionId="@p.FactionId" Name="@(Store.Faction(p.FactionId)?.Name ?? p.Name)" /></span>
+                    <strong title="@p.Name">@p.Name</strong>
+                    <span>@(p.HasPassed ? "PASS" : p.Id == FocusPlayerId ? "◀" : "")</span>
+                </div>
+            }
+        </div>
+    </details>
+    <div class="wheel-stage">
+        <div class="wheel-disc" aria-hidden="true">
+            <svg viewBox="0 0 600 600" preserveAspectRatio="none"><circle class="disc-outer" cx="300" cy="300" r="272" /><circle cx="300" cy="300" r="256" /><circle class="disc-dashed" cx="300" cy="300" r="226" /><circle cx="300" cy="300" r="185" /><path d="M300 18V100M582 300H500M300 582V500M18 300H100" /></svg>
+        </div>
+        @foreach (var p in ordered)
+        {
+            var rank = ranks.GetValueOrDefault(p.Id, -1);
+            <div @key="p.Id" class="wheel-slot" data-player-id="@p.Id" data-rank="@rank" aria-hidden="@(rank < 0 || rank > 2 ? "true" : "false")">
+                <div class="wheel-figure" aria-hidden="true">
+                    <div class="wheel-aura"></div>
+                    <div class="wheel-picture">
+                        <PrototypeFactionArt FactionId="@p.FactionId" Name="" Eager="@(rank is >= 0 and <= 3)" />
+                        <div class="wheel-tint"><PrototypeFactionArt FactionId="@p.FactionId" Name="" Eager="@(rank is >= 0 and <= 3)" /></div>
+                        <div class="wheel-scan"></div>
+                    </div>
+                    <div class="wheel-rim"></div><div class="wheel-horizon"></div><div class="wheel-plinth"></div>
+                </div>
+                <div class="wheel-label" title="@p.Name · @(Store.Faction(p.FactionId)?.Name ?? "Choose faction")">
+                    <span class="wheel-sr-only">@(rank == 0 && focusIndex >= 0 ? "On turn: " : rank == 1 ? "Next: " : "Then: ")</span>
+                    <b>@(p.Initiative?.ToString() ?? "—")</b><strong>@p.Name</strong>
+                </div>
+            </div>
+        }
+        @if (queue.Count == 0)
+        {
+            <p class="wheel-empty">All passed · round complete</p>
+        }
+    </div>
+    <span class="wheel-sr-only" role="status">@(current is null ? "All players have passed." : $"{current.Name} {(focusIndex >= 0 ? "is on turn" : "is next")}. {(next is null ? "" : $"Next: {next.Name}.")}")</span>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public SessionStateDto Session { get; set; } = default!;
+    [Parameter] public Guid? FocusPlayerId { get; set; }
+    ElementReference element;
+    IJSObjectReference? module;
+    bool disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (disposed) return;
+        try
+        {
+            module ??= await JS.InvokeAsync<IJSObjectReference>("import", "/prototype-initiative-wheel.js");
+            if (!disposed) await module.InvokeVoidAsync("update", element);
+        }
+        catch (JSException) { /* The CSS layout still displays the server's current order. */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed) return;
+        disposed = true;
+        if (module is null) return;
+        try { await module.InvokeVoidAsync("disconnect", element); await module.DisposeAsync(); }
+        catch (JSException) { }
+    }
+}

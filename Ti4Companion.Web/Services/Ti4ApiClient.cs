@@ -111,10 +111,21 @@ public class Ti4ApiClient(HttpClient http)
         => PostFor($"api/sessions/{id}/turn/active", new SetActivePlayerRequest(playerId));
     public Task<SessionStateDto?> AdvanceTurnAsync(Guid id) => PostFor<SessionStateDto>($"api/sessions/{id}/turn/advance", null);
     public Task<SessionStateDto?> PreviousTurnAsync(Guid id) => PostFor<SessionStateDto>($"api/sessions/{id}/turn/previous", null);
+    public Task<SessionStateDto?> CompletePrimaryAsync(Guid id, int card, Guid? actionId = null)
+        => PostFor($"api/sessions/{id}/primary/complete", new CompletePrimaryRequest(card, actionId));
+    public Task<SessionStateDto?> UndoOwnActionAsync(Guid id, Guid action)
+        => PostFor($"api/sessions/{id}/undo", new UndoOwnActionRequest(action, true));
 
     // ---- Players ----
     public Task<SessionStateDto?> UpdatePlayerAsync(Guid id, Guid playerId, UpdatePlayerRequest req)
         => PatchFor($"api/sessions/{id}/players/{playerId}", req);
+    public async Task<SessionStateDto?> AdminRemovePlayerAsync(Guid id, Guid playerId)
+    {
+        var response = await http.DeleteAsync($"api/sessions/{id}/players/{playerId}");
+        if (IsRejection(response)) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<SessionStateDto>();
+    }
     public Task RemovePlayerAsync(Guid id, Guid playerId)
         => http.DeleteAsync($"api/sessions/{id}/players/{playerId}");
     public Task<SessionStateDto?> SetPassedAsync(Guid id, Guid playerId, bool passed)
@@ -149,8 +160,10 @@ public class Ti4ApiClient(HttpClient http)
         => PostFor($"api/sessions/{id}/speaker", new SetSpeakerRequest(playerId));
     public Task<SessionStateDto?> SetSecondaryPlayersAsync(Guid id, IReadOnlyList<Guid> playerIds)
         => PostFor($"api/sessions/{id}/secondary", new SetSecondaryPlayersRequest(playerIds));
-    public Task<SessionStateDto?> SetSecondaryDoneAsync(Guid id, Guid playerId)
-        => PostFor($"api/sessions/{id}/players/{playerId}/secondary-done", new { });
+    public Task<SessionStateDto?> SetSecondaryDoneAsync(Guid id, Guid playerId, Guid? actionId = null)
+        => PostFor($"api/sessions/{id}/players/{playerId}/secondary-done", new CompleteSecondaryRequest(actionId));
+    public Task<SessionStateDto?> FollowSecondaryAsync(Guid id, Guid playerId, Guid actionId)
+        => PostFor($"api/sessions/{id}/players/{playerId}/secondary-follow", new CompleteSecondaryRequest(actionId));
     public Task<SessionStateDto?> CloseSecondaryAsync(Guid id)
         => PostFor($"api/sessions/{id}/secondary/close", new { });
     public Task<SessionStateDto?> StartCombatAsync(Guid id, Guid opponentId)

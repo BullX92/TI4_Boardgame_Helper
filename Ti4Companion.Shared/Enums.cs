@@ -394,5 +394,9 @@ public enum SessionLogKind
     /// time-on-turn. It closes when every player has said they are done, or when the player who played the
     /// card (or the host) moves the table on. Keep the numeric values stable.</summary>
     TechPromptOpen = 37,
-    TechPromptClose = 38
+    TechPromptClose = 38,
+    /// <summary>Internal persistent undo checkpoint; excluded from the public match log.</summary>
+    PrototypeCheckpoint = 39,
+    PrototypeUndo = 40,
+    SecondaryFollow = 41
 }

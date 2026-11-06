@@ -1,0 +1,6 @@
+.time-content{min-width:0;color:#f4f7ff}
+.time-content h2{font-size:22px}.time-content p{font-size:13px;color:#bbc9da;margin:6px 0 12px;overflow-wrap:anywhere}
+.time-player{border-left:4px solid var(--player);background:#1b2a40;margin:8px 0;padding:8px}
+.time-player summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;font-size:14px;min-width:0}
+.time-player summary span{overflow-wrap:anywhere;min-width:0}.time-player summary strong{flex:none;font-size:13px;font-variant-numeric:tabular-nums}
+.time-player ol{padding-left:24px;font-variant-numeric:tabular-nums}

@@ -1,0 +1,38 @@
+@inject SessionStore Store
+@inject IJSRuntime JS
+
+<div class="undo-control">
+    <button type="button" class="undo-button" aria-label="Undo last own action" disabled="@(!Available)" title="@Hint" @onclick="Undo">↶</button>
+    @if (error is not null) { <span class="undo-error" role="alert">@error</span> }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SessionStateDto Session { get; set; } = default!;
+    bool busy;
+    string? error;
+    bool Available => !busy && Store.Connected && Session.ActivePlayerId == Store.Me?.Id && Session.UndoActionId is not null;
+    string Hint => Session.UndoUnavailableReason ?? (Session.UndoDescription is {} label ? $"Undo: {label}" : "No own action to undo in this turn.");
+    async Task Undo()
+    {
+        if (!Available || Session.UndoActionId is not Guid action) return;
+        var sessionId = Session.Id;
+        var playerId = Store.Me!.Id;
+        error = null;
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Undo your last action: {Session.UndoDescription}? Other players' decisions will be kept.");
+        if (!confirmed) return;
+        if (Session.Id != sessionId || Session.ActivePlayerId != playerId || Session.UndoActionId != action)
+        {
+            error = "The table changed. Check your current action before using Undo.";
+            return;
+        }
+        busy = true;
+        try
+        {
+            var result = await Store.Api.UndoOwnActionAsync(sessionId, action);
+            if (result is null) { error = "This action can no longer be undone."; await Store.RefreshAsync(); }
+            else await Store.Mutate(Task.FromResult<SessionStateDto?>(result));
+        }
+        catch { error = "Undo was not confirmed. Please check the current table state."; }
+        finally { busy = false; }
+    }
+}

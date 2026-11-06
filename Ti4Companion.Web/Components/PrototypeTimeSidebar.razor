@@ -1,0 +1,29 @@
+@implements IDisposable
+@inject SessionStore Store
+<div class="time-content"><h2>Player times</h2><p>Action turns · includes time spent resolving strategy actions</p>
+    @foreach (var player in Session.Players.OrderBy(p => p.SeatOrder)) {
+        var turns = Turns(player.Id);
+        <details class="time-player" style="--player:@player.ColorHex"><summary><span>@player.Name</span><strong>@Format(TimeSpan.FromTicks(turns.Sum(t => t.Ticks)))</strong></summary>
+        @if(turns.Count == 0){<p>No turns yet.</p>}
+        else {<ol>@foreach(var turn in turns){<li>@Format(turn)</li>}</ol>}
+        </details>
+    }</div>
+@code {
+    [Parameter, EditorRequired] public SessionStateDto Session { get; set; } = default!;
+    IReadOnlyList<SessionLogEntryDto> log = Array.Empty<SessionLogEntryDto>();
+    DateTimeOffset last; System.Threading.Timer? timer; bool disposed;
+    protected override void OnInitialized() => timer = new(_ => { if(!disposed) _ = InvokeAsync(StateHasChanged); }, null, 1000, 1000);
+    protected override async Task OnParametersSetAsync() { if(last == Session.LastActivityUtc) return; last = Session.LastActivityUtc; try { log = await Store.Api.GetLogAsync(Session.JoinCode); } catch { } }
+    List<TimeSpan> Turns(Guid player) {
+        var result = new List<TimeSpan>(); SessionLogEntryDto? current = null;
+        foreach(var e in log.OrderBy(e=>e.TimestampUtc)) {
+            if(e.Kind == SessionLogKind.TurnChange) { if(current?.TargetPlayerId == player) result.Add(e.TimestampUtc-current.TimestampUtc); current=e; }
+            else if(e.Kind == SessionLogKind.Pass && current?.TargetPlayerId == e.TargetPlayerId) { if(current is not null && current.TargetPlayerId == player) result.Add(e.TimestampUtc-current.TimestampUtc); current=null; }
+            else if(e.Kind == SessionLogKind.PhaseChange && e.Phase != GamePhase.Action) current=null;
+        }
+        if(current is not null && Session.Phase == GamePhase.Action && current.TargetPlayerId == player && Session.ActivePlayerId == player) result.Add(DateTimeOffset.UtcNow-current.TimestampUtc);
+        return result;
+    }
+    static string Format(TimeSpan t) => $"{(int)t.TotalHours:00}:{t.Minutes:00}:{t.Seconds:00}";
+    public void Dispose() { disposed=true; timer?.Dispose(); }
+}

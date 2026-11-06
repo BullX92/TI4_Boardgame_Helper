@@ -185,7 +185,8 @@ public record PlayerDto(
     bool SecondaryPending = false,
     /// <summary>Technology action: this player still owes an entry, so the table's clock stands still.</summary>
     bool TechPromptPending = false,
-    bool SeatClaimed = false);
+    bool SeatClaimed = false,
+    bool SecondaryFollowing = false);
 
 /// <summary><paramref name="CustomName"/>/<paramref name="CustomPoints"/> are set for an objective added
 /// by hand (e.g. a secret made public via "Classified Document Leaks") rather than from the content set.</summary>
@@ -294,7 +295,11 @@ public record SessionStateDto(
     /// this existed, the displaced device kept a session that looked completely alive and silently did
     /// nothing, because the server no longer recognised it as that player.
     /// </para></summary>
-    Guid? CallerPlayerId = null);
+    Guid? CallerPlayerId = null,
+    Guid? UndoActionId = null,
+    string? UndoDescription = null,
+    string? UndoUnavailableReason = null,
+    Guid? StrategyActionId = null);
 
 /// <summary>A single match-log event. Structured (not pre-rendered) so the client localizes it and
 /// the statistics view diffs the timeline kinds for durations. See <see cref="SessionLogKind"/>.</summary>
@@ -312,7 +317,7 @@ public record JoinResultDto(SessionStateDto Session, Guid PlayerId, string Devic
 public record CreateSessionRequest(
     string Name, Language Language, Expansion? ActiveExpansions,
     string HostName, string? FactionId, string? ColorHex, string? DeviceToken,
-    IReadOnlyList<string>? PlayerNames = null);
+    IReadOnlyList<string>? PlayerNames = null, IReadOnlyList<string>? PlayerColors = null);
 
 /// <summary>Join a session. With <paramref name="ClaimPlayerId"/> set, take over (claim) that existing
 /// non-host seat instead of creating a new player; otherwise a new player is added (capped at 8).
@@ -432,6 +437,9 @@ public record SetStrategyCardUsedRequest(bool Used);
 
 /// <summary>Set or clear the strategy action currently being resolved (drives the display emphasis).</summary>
 public record SetActiveStrategyCardRequest(int? StrategyCardId);
+public record CompletePrimaryRequest(int StrategyCardId, Guid? ActionId = null);
+public record CompleteSecondaryRequest(Guid? ActionId = null);
+public record UndoOwnActionRequest(Guid ActionId, bool Confirmed);
 
 public record SetActivePlayerRequest(Guid? PlayerId);
 
