@@ -8,7 +8,7 @@ async function main() {
     const playwright = require(packagePath);
     if (!['chromium', 'webkit'].includes(engine)) throw new Error('Choose chromium or webkit');
     const run = new Function('return (' + fs.readFileSync(path.join(__dirname, 'verify_compact_ui.js'), 'utf8') + ')')();
-    const browser = await playwright[engine].launch({headless:true, ...(engine === 'chromium' ? {channel:'chrome'} : {})});
+    const browser = await playwright[engine].launch({headless:true, ...(engine === 'chromium' && process.env.PLAYWRIGHT_CHANNEL ? {channel:process.env.PLAYWRIGHT_CHANNEL} : {})});
     const context = await browser.newContext();
     const page = await context.newPage();
     page.setDefaultTimeout(20000);

@@ -536,7 +536,7 @@ public static class SessionEndpoints
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
-        if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
         if (session.Name == "Table Prototype")
         {
             if (session.Phase != GamePhase.Action || session.SecondaryCardId is not null || session.ActiveStrategyCardId is not null)
@@ -578,6 +578,7 @@ public static class SessionEndpoints
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
+        if (GetCaller(session, http) is null) return Forbidden();
         if (req.ActionId is Guid action && action != await PrototypeActionHistory.CurrentStrategyActionAsync(db, session, ct))
             return Results.Conflict(new { error = "The strategy action changed." });
         return await CompletePrototypePrimary(session, req.StrategyCardId, db, hub, http, ct);
@@ -586,7 +587,7 @@ public static class SessionEndpoints
     private static async Task<IResult> CompletePrototypePrimary(GameSession session, int? expectedCard, Ti4DbContext db, IHubContext<SessionHub> hub, HttpContext http, CancellationToken ct)
     {
         if (session.Name != "Table Prototype" || session.Phase != GamePhase.Action) return Results.BadRequest();
-        if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
         if (session.SpeakerPending) return Results.BadRequest(new { error = "Appoint the new Speaker before finishing the Politics primary." });
         if (session.ActiveStrategyCardId is null) return await SaveAndReturn(db, hub, session, ct);
         if (session.ActiveStrategyCardId != expectedCard) return Results.Conflict(new { error = "The running strategy card changed." });
@@ -624,7 +625,7 @@ public static class SessionEndpoints
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
-        if (!CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerCanActFor(session, http, session.ActivePlayerId ?? Guid.Empty)) return Forbidden();
         if (session.Name == "Table Prototype" && (session.Phase != GamePhase.Action || session.ActiveStrategyCardId is not null || session.SecondaryCardId is not null))
             return Results.BadRequest(new { error = "Finish primary and secondaries first." });
         PrototypeActionHistory.Begin(db, session, session.ActivePlayerId, "End turn");
@@ -724,7 +725,7 @@ public static class SessionEndpoints
             {
                 if (session.Name == "Table Prototype")
                 {
-                    if (!req.Unclaimed || !CallerIsHost(session, http)) return Forbidden();
+                    if (!req.Unclaimed || !CallerCanUsePrototypeAdmin(session, http)) return Forbidden();
                     if (session.Phase != GamePhase.Setup) return Results.BadRequest(new { error = "Players can be added during setup only." });
                     if (string.IsNullOrWhiteSpace(req.Name) || session.Players.Any(p => p.Name.Equals(req.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
                         return Results.BadRequest(new { error = "Enter a unique player name." });
@@ -764,7 +765,11 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
-        if (!CallerCanActFor(session, http, playerId)) return Forbidden();           // edit own profile, or host edits anyone
+        var panelSetupEdit = CallerCanUsePrototypeAdmin(session, http)
+            && req.Name is null && req.ColorHex is null && req.HasPassed is null && req.SeatOrder is null;
+        if (!panelSetupEdit && !CallerCanActFor(session, http, playerId)) return Forbidden();
+        if (panelSetupEdit && req.IsReady is not null && session.Phase != GamePhase.Setup)
+            return Results.BadRequest(new { error = "Readiness can be edited during setup only." });
         if (req.SeatOrder is not null && !CallerIsHost(session, http)) return Forbidden(); // seat order = host only
         if (session.Name == "Table Prototype" && req.FactionId is not null)
         {
@@ -800,10 +805,10 @@ public static class SessionEndpoints
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
         // Host removes anyone; a non-host may remove only themselves (leave).
-        if (!CallerCanActFor(session, http, playerId)) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerCanActFor(session, http, playerId)) return Forbidden();
         if (session.Name == "Table Prototype")
         {
-            if (!CallerIsHost(session, http)) return Forbidden();
+            if (!CallerCanUsePrototypeAdmin(session, http)) return Forbidden();
             if (session.Phase != GamePhase.Setup || player.IsHost) return Results.BadRequest(new { error = "Only non-host players can be removed during setup." });
         }
 
@@ -819,7 +824,7 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
-        if (!CallerCanActFor(session, http, playerId)) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerCanActFor(session, http, playerId)) return Forbidden();
         if (session.Name == "Table Prototype" && req.Passed &&
             (session.Phase != GamePhase.Action || session.ActivePlayerId != playerId || session.SecondaryCardId is not null || session.ActiveStrategyCardId is not null))
             return Results.BadRequest(new { error = "Only the active player may pass after finishing the action." });
@@ -868,6 +873,7 @@ public static class SessionEndpoints
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
 
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerCanActFor(session, http, playerId)) return Forbidden();
         var maxCards = MaxCards(session);
         if (session.Name == "Table Prototype")
         {
@@ -878,7 +884,7 @@ public static class SessionEndpoints
         }
         // Pick order: speaker first, then clockwise by seat. A non-host may only take their own card
         // and only when it's their turn to pick; the host may pick for anyone.
-        if (!CallerIsHost(session, http))
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerIsHost(session, http))
         {
             var caller = GetCaller(session, http);
             if (caller is null || caller.Id != playerId || TurnService.CurrentPicker(session, maxCards) != playerId)
@@ -1091,7 +1097,11 @@ public static class SessionEndpoints
         var session = await LoadGraphAsync(db, id, ct);
         var player = session?.Players.FirstOrDefault(p => p.Id == playerId);
         if (session is null || player is null) return Results.NotFound();
-        if (!CallerIsHost(session, http) && GetCaller(session, http)?.Id != playerId) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerIsHost(session, http) && GetCaller(session, http)?.Id != playerId) return Forbidden();
+        if (session.Name == "Table Prototype" &&
+            (session.Phase != GamePhase.Status || session.StatusStage != StatusStage.Scoring ||
+             (req.Done && TurnService.CurrentScorer(session, FactionInitiative.Overrides) != playerId)))
+            return Results.BadRequest(new { error = "Wait for this player's scoring turn." });
         player.StatusDone = req.Done;
         // Handing over: whoever is up next has something to do. Only on "done", never on the undo — that is a
         // correction, and a phone buzzing about it says the opposite of what happened.
@@ -1121,8 +1131,9 @@ public static class SessionEndpoints
         if (session is null) return Results.NotFound();
         var caller = GetCaller(session, http);
         var isActive = caller is not null && caller.Id == session.ActivePlayerId;
-        if (!isActive && !CallerIsHost(session, http)) return Forbidden();
-        if (session.ActiveStrategyCardId != GameRules.PoliticsStrategyCard && !CallerIsHost(session, http))
+        if (!CallerCanUsePrototypeAdmin(session, http) && !isActive && !CallerIsHost(session, http)) return Forbidden();
+        if (session.ActiveStrategyCardId != GameRules.PoliticsStrategyCard
+            && (session.Name == "Table Prototype" ? session.Phase != GamePhase.Setup : !CallerIsHost(session, http)))
             return Results.BadRequest(new { error = "Politics is not the running strategy action." });
         if (session.Players.All(p => p.Id != req.PlayerId)) return Results.NotFound();
         // The card reads "choose a player other than the speaker", so the token has to move.
@@ -1357,12 +1368,13 @@ public static class SessionEndpoints
     {
         var session = await LoadGraphAsync(db, id, ct);
         if (session is null) return Results.NotFound();
+        if (GetCaller(session, http) is null) return Forbidden();
         if (req.ActionId is Guid action && action != await PrototypeActionHistory.CurrentStrategyActionAsync(db, session, ct))
             return Results.Conflict(new { error = "The strategy action changed." });
         var player = session.Players.FirstOrDefault(p => p.Id == playerId);
         if (player is null) return Results.NotFound();
         var caller = GetCaller(session, http);
-        if (!CallerIsHost(session, http) && caller?.Id != playerId) return Forbidden();
+        if (!CallerCanUsePrototypeAdmin(session, http) && !CallerIsHost(session, http) && caller?.Id != playerId) return Forbidden();
         if (!player.SecondaryPending) return await SaveAndReturn(db, hub, session, ct);   // already done
         player.SecondaryPending = false;
         Log(db, session, SessionLogKind.SecondaryDone, caller?.Id, target: playerId,
@@ -1893,6 +1905,11 @@ public static class SessionEndpoints
     /// <summary>The host may act for anyone; everyone else only for themselves.</summary>
     private static bool CallerCanActFor(GameSession s, HttpContext http, Guid playerId)
         => CallerIsHost(s, http) || GetCaller(s, http)?.Id == playerId;
+
+    // Only the PrototypeAdminPanel contract uses this permission. Membership is resolved
+    // against this session; host identity, seat tokens and unrelated routes stay unchanged.
+    private static bool CallerCanUsePrototypeAdmin(GameSession s, HttpContext http)
+        => s.Name == "Table Prototype" && GetCaller(s, http) is not null;
 
     private static IResult Forbidden() =>
         Results.Json(new { error = "Not allowed — host only." }, statusCode: StatusCodes.Status403Forbidden);

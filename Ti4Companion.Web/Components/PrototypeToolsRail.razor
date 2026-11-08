@@ -13,17 +13,16 @@
             <nav class="tools-nav" aria-label="Table options">
                 <div class="tools-nav-heading"><span>TOOLS</span><button class="tools-close" type="button" aria-label="Close table tools" autofocus @onclick="Close">×</button></div>
                 <button class="tools-option @(selected == "times" ? "selected" : "")" type="button" aria-pressed="@((selected == "times").ToString().ToLowerInvariant())" @onclick="ShowTimes"><span aria-hidden="true">⏱</span><span>Player times</span></button>
-                @if (IsHost)
-                {
-                    <button class="tools-option @(selected == "admin" ? "selected" : "")" type="button" aria-pressed="@((selected == "admin").ToString().ToLowerInvariant())" @onclick="ShowAdmin"><span aria-hidden="true">⚙</span><span>Admin</span></button>
-                }
+                <button class="tools-option @(selected == "admin" ? "selected" : "")" type="button" aria-pressed="@((selected == "admin").ToString().ToLowerInvariant())" @onclick="ShowAdmin"><span aria-hidden="true">⚙</span><span>Admin</span></button>
             </nav>
             @if (selected is not null)
             {
                 <section class="tools-panel" aria-label="@(selected == "times" ? "Player times panel" : "Admin panel")">
                     <button class="tools-panel-close" type="button" aria-label="Close panel" @onclick="ClosePanel">×</button>
+                    <div class="tools-panel-content" tabindex="0">
                     @if (selected == "times") { <PrototypeTimeSidebar Session="Session" /> }
-                    else if (selected == "admin" && IsHost) { <PrototypeAdminPanel Session="Session" /> }
+                    else if (selected == "admin") { <PrototypeAdminPanel Session="Session" /> }
+                    </div>
                 </section>
             }
         </div>
@@ -32,7 +31,6 @@
 
 @code {
     [Parameter, EditorRequired] public SessionStateDto Session { get; set; } = default!;
-    [Parameter] public bool IsHost { get; set; }
     ElementReference dialog;
     ElementReference trigger;
     IJSObjectReference? module;
@@ -41,7 +39,7 @@
     string? selected;
 
     void Open() { expanded = true; pendingOpen = true; }
-    void Select(string option) => selected = option == "admin" && !IsHost ? null : option;
+    void Select(string option) => selected = option;
     void ShowTimes() => Select("times");
     void ShowAdmin() => Select("admin");
     async Task ClosePanel()
@@ -49,7 +47,6 @@
         selected = null;
         if (module is not null) await module.InvokeVoidAsync("focusOption", dialog);
     }
-    protected override void OnParametersSet() { if (!IsHost && selected == "admin") selected = null; }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!pendingOpen || disposed) return;

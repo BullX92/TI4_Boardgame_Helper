@@ -1,6 +1,6 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
-<button class="wake-status" @onclick="Enable">@(awake ? "◉ Screen kept awake" : "☼ Keep screen awake")</button>
+<button type="button" class="wake-status @(awake ? "is-awake" : "")" @onclick="Enable">@(awake ? "◉ Screen kept awake" : "☼ Keep screen awake")</button>
 @code{
     [Parameter] public bool Active {get;set;}
     IJSObjectReference? module; DotNetObjectReference<PrototypeTurnAttention>? callback; bool awake;

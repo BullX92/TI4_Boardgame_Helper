@@ -13,7 +13,7 @@
                 </div>
             }
             @if(Session.Players.Count<8){<div class="admin-add"><h3>Add player</h3><label>Name<input @bind="newName" @bind:event="oninput" maxlength="40" /></label><label>Color<select @bind="newColor"><option value="">Choose color</option>@foreach(var c in Palette.Where(c=>!Session.Players.Any(p=>string.Equals(p.ColorHex,c.Item2,StringComparison.OrdinalIgnoreCase)))){<option value="@c.Item2">@c.Item1</option>}</select></label><button disabled="@(busy||string.IsNullOrWhiteSpace(newName)||string.IsNullOrEmpty(newColor))" @onclick="Add">Add player</button></div>}
-            <p>Players can be added or removed during setup. The host may mark an absent player ready.</p>
+            <p>Players can be added or removed during setup. Any seated player may mark an absent player ready.</p>
         }
         else if(Session.Phase == GamePhase.Strategy){
             var picker=Store.PlayerById(Store.CurrentPickerId);
@@ -23,7 +23,7 @@
         else if(Session.Phase == GamePhase.Action){
             var active=Store.PlayerById(Session.ActivePlayerId);
             <h3>Current turn · @(active?.Name??"No active player")</h3>
-            @if(Session.ActiveStrategyCardId is not null){<p>Resolve @Store.Card(Session.ActiveStrategyCardId.Value)?.Name at the table.</p>@if(Session.SpeakerPending){<PrototypeSpeakerPicker Politics="true" />}<button disabled="@(busy||Session.SpeakerPending)" @onclick="CompletePrimary">Primary complete →</button>}
+            @if(Session.ActiveStrategyCardId is not null){<p>Resolve @Store.Card(Session.ActiveStrategyCardId.Value)?.Name at the table.</p>@if(Session.SpeakerPending){<PrototypeSpeakerPicker Politics="true" SharedAdmin="true" />}<button disabled="@(busy||Session.SpeakerPending)" @onclick="CompletePrimary">Primary complete →</button>}
             @if(Session.SecondaryCardId is not null){@foreach(var secondary in Session.Players.Where(p=>p.SecondaryPending).OrderBy(p=>p.SeatOrder)){<p>@secondary.Name: follow or skip at the table.</p><button disabled="@busy" @onclick="()=>SecondaryDone(secondary.Id)">Confirm @secondary.Name's answer</button>}}
             @if(active is not null && Session.ActiveStrategyCardId is null && Session.SecondaryCardId is null){
                 <button disabled="@busy" @onclick="Advance">End @active.Name's turn →</button>

@@ -16,7 +16,7 @@
 .turn-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.65fr);gap:8px}.turn-actions button{margin:0}.own-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.table-app .own-cards button{margin:0;text-align:left;border-left:3px solid var(--card);background:linear-gradient(110deg,color-mix(in srgb,var(--card) 16%,#101827),#101827);font-size:13px;overflow-wrap:anywhere}.own-cards button span{display:block;color:var(--card);font-size:9px;letter-spacing:.07em;margin-bottom:2px}
 .workflow{border-top:1px solid #34445a;padding-top:8px}.workflow h3{margin-bottom:4px}.workflow p,.waiting-message,.pick-progress{font-size:13px}.table-app .waiting-message{margin:0}.workflow button{width:auto;min-width:80px;margin-right:6px}.table-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.table-card-grid button{margin:0;text-align:left;font-size:13px;padding:7px;overflow-wrap:anywhere}.table-card-grid b{margin-right:6px;color:#d4af37}
 .table-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;color:#8597ad;margin-top:8px}
-.identity-picker{max-width:560px;margin:24px auto}.seat-choice{display:flex;justify-content:space-between;gap:8px;text-align:left;align-items:center}.seat-choice span{font-size:11px;color:#a8bbd6}.claim-invite{display:flex;align-items:center;gap:15px;padding:14px 0}.claim-invite a{color:#91bdee;font-size:12px;overflow-wrap:anywhere;min-width:0}details{font-size:13px;color:#b3c3da}summary{cursor:pointer}.table-error{padding:12px;background:#7f1d1d;border-radius:8px;color:#fff!important}.table-check{display:flex;align-items:center;gap:8px;text-align:left}.table-check span{font-size:20px;color:#4a90d9}.table-agenda{font-size:13px;color:#b8c5d5;display:block;margin:10px 0}.table-agenda input{vertical-align:middle;width:18px;height:18px;margin-right:6px}
+.identity-picker{max-width:560px;margin:24px auto}.seat-choice{display:flex;justify-content:space-between;gap:8px;text-align:left;align-items:center}.seat-choice span{font-size:11px;color:#a8bbd6}.claim-invite{display:flex;align-items:center;gap:15px;padding:14px 0}.claim-invite a{display:inline-flex;align-items:center;min-height:44px;color:#91bdee;font-size:12px;overflow-wrap:anywhere;min-width:44px}details{font-size:13px;color:#b3c3da}summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.table-error{padding:12px;background:#7f1d1d;border-radius:8px;color:#fff!important}.table-check{display:flex;align-items:center;gap:8px;text-align:left}.table-check span{font-size:20px;color:#4a90d9}.table-agenda{font-size:13px;color:#b8c5d5;display:block;margin:10px 0}.table-agenda input{vertical-align:middle;width:18px;height:18px;margin-right:6px}
 /* All seats stay dark. Only the active player's console is emphasized. */
 .table-app.is-my-turn{--wake-ink:#a3b9d5;background:linear-gradient(180deg,#101c30,#080e1b);color:#f3f4f6}.is-my-turn .table-focus{background:linear-gradient(135deg,#182e49,#111e31);border-color:#69b5ff;box-shadow:0 0 0 1px #4a90d926,0 8px 26px #0004}.is-my-turn .table-kicker{color:#e7c96d!important}
 @media(min-width:1000px){.table-app{padding-top:16px}.play-grid{gap:18px}.table-focus,.table-panel{padding:18px}.turn-heading h2{font-size:30px}}
@@ -50,6 +50,29 @@
 .table-focus:has(> .own-cards > button:only-child) .focus-controls ::deep .turn-clock strong{font-size:16px}
 .table-focus:has(> .own-cards > button:only-child) .focus-controls ::deep .turn-clock span{font-size:8px;letter-spacing:0}
 }
+/* Viewport-bound landscape shell. Only explicitly labelled auxiliary lists scroll. */
+@media (orientation:landscape) and (min-width:800px){
+.table-app{height:100dvh;min-height:0;display:flex;flex-direction:column;gap:4px;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom))}
+.table-top,.table-identity,.table-foot{flex:none;min-width:0}
+.table-top{padding-bottom:0;min-height:44px}
+.table-identity{padding:0;min-height:30px}.table-identity h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.table-identity p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.table-identity>div:nth-child(2){overflow:hidden}.table-foot{margin:0;min-height:14px;line-height:14px}
+.play-grid{flex:1;min-height:0;align-items:stretch;gap:10px}
+.turn-main{min-height:0;display:flex;flex-direction:column;gap:4px}.play-grid aside{min-height:0}
+.table-focus,.pick-console{flex:none;margin:0}.table-focus{row-gap:4px;padding:6px}.table-focus h2{font-size:22px}.table-focus .table-kicker{margin:0!important}
+.table-app button{padding:4px 7px;min-height:44px;overflow-wrap:anywhere}
+.turn-actions,.own-cards{gap:4px}.table-app .own-cards button{font-size:12px;padding:3px 6px}.own-cards button span{display:inline;margin-right:5px}
+.workflow{padding-top:3px;display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px}.workflow h3{margin:0}.workflow p{margin:0;font-size:11px}.workflow button{margin:0;flex:1;min-width:100px}.workflow ::deep .speaker-picker{flex:1;min-width:145px;margin:0}.workflow ::deep select{margin-top:0;padding:5px}
+.pick-console{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 6px;padding:5px}.pick-console .table-kicker{margin:0!important;font-size:9px!important}.pick-console h2{font-size:18px;margin:0;grid-column:1;grid-row:2}.pick-progress{grid-column:2;grid-row:1/3;margin:0!important;font-size:11px!important;align-self:center}
+.table-card-grid{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.table-card-grid button{font-size:11px;padding:3px}.pick-console>.table-primary{grid-column:2;grid-row:1/3;margin:0;max-width:120px}.pick-console .table-kicker{display:none}.pick-console h2{grid-row:1}.pick-progress{grid-column:1;grid-row:2}.table-card-grid{grid-row:3}
+.identity-picker{flex:1;min-height:0;max-width:none;width:100%;margin:0;overflow:auto;overscroll-behavior:contain}.seat-choice{min-width:0}.seat-choice strong{overflow-wrap:anywhere}
+.status-panel{flex:1;min-height:0;margin:0;padding:8px}.status-panel h2{font-size:22px}.status-panel p{margin:3px 0}.status-checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.status-checks button{margin:0;font-size:12px}.status-panel .table-agenda{margin:4px 0;min-height:44px;display:flex;align-items:center;gap:8px;font-size:12px}.status-panel:has(.status-checks){display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:3px 12px;align-content:start}.status-panel:has(.status-checks)>.table-kicker,.status-panel:has(.status-checks)>h2{grid-column:1/-1;margin:0!important}.status-checks{align-self:start}.status-progression{min-width:0;display:flex;flex-direction:column;gap:4px;align-self:start}.status-progression .table-primary{margin:0}.status-progression .table-agenda{margin:0}.table-agenda input{flex:none}
+}
+/* A soft keyboard may leave less than the supported game surface: allow form scrolling. */
+@media (orientation:landscape) and (min-width:800px) and (max-height:279px){
+.table-app:has(input:focus,select:focus){height:auto;min-height:100dvh}
+.table-app:has(input:focus,select:focus) ::deep .create-session{display:block}
+}
 /* Native 2400 × 1080 landscape viewports use the available width, with no 1200px letterbox. */
 @media(min-width:1600px) and (orientation:landscape){
 .table-app{max-width:2400px;padding-top:18px;padding-right:22px;font-size:18px}.table-app.has-tools{padding-left:72px}
@@ -58,4 +81,39 @@
 .play-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px}.table-focus,.table-panel{padding:20px}.turn-heading h2{font-size:40px}.table-kicker{font-size:13px!important}
 .table-app button{font-size:18px;min-height:52px}.table-app .own-cards button{font-size:18px}.own-cards button span{font-size:12px}.workflow h3{font-size:24px}.workflow p{font-size:18px}.workflow p.secondary-progress,.workflow p.secondary-done,.workflow p.primary-done{font-size:15px}.table-foot{font-size:13px}
 .focus-controls ::deep .turn-clock strong{font-size:36px}.focus-controls ::deep .turn-clock span{font-size:12px}
+}
+/* Three-zone game surface; identity belongs to the header, never another body row. */
+.play-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"actions" "order" "strategy"}
+.order-zone{grid-area:order;min-width:0}.turn-main{grid-area:actions}.strategy-zone{grid-area:strategy}
+.table-top:has(.table-identity){display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:4px 8px;align-items:center}
+.table-top:has(.table-identity) .table-home{grid-column:1;grid-row:1;justify-content:center}
+.table-top:has(.table-identity) .table-brand{display:none}
+.table-top .table-identity{grid-column:2;grid-row:1;min-width:0;padding:0;gap:6px;max-width:300px}
+.table-top .table-identity>div:nth-child(2){display:block;min-width:0;overflow:hidden}
+.table-top .table-identity h1{font-size:14px;line-height:17px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.table-top .table-identity p{font-size:10px;line-height:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.table-top .table-portrait{width:26px;height:30px}.table-top .table-initiative{display:block;font-size:20px;line-height:21px}.table-top .table-initiative small{display:block;font-size:7px;line-height:9px}
+.table-top:has(.table-identity) .table-meta{grid-column:2/-1;grid-row:2;order:0;padding:0;justify-content:flex-start;gap:8px;font-size:9px}
+.table-top:has(.table-identity) .table-tools{grid-column:3;grid-row:1;margin:0;gap:4px}
+@media(orientation:landscape) and (max-width:799px){.play-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"actions strategy" "order strategy"}}
+@media(orientation:landscape) and (min-width:800px){
+.table-top:has(.table-identity){grid-template-columns:44px minmax(130px,1fr) auto auto;gap:8px;min-height:44px;padding:0}
+.table-top:has(.table-identity) .table-meta{grid-column:3;grid-row:1;white-space:nowrap;gap:8px;font-size:9px}
+.table-top:has(.table-identity) .table-tools{grid-column:4;grid-row:1}
+.play-grid{grid-template-columns:minmax(0,.72fr) minmax(0,1.1fr) minmax(0,1.18fr);grid-template-areas:"order actions strategy";gap:8px;align-items:stretch}
+.order-zone{display:flex;flex-direction:column;border:1px solid #273247;border-radius:9px;padding:6px;min-height:0;background:#0b1423;isolation:isolate;z-index:1}
+.turn-main{justify-content:flex-start;gap:4px}.table-focus{grid-template-columns:minmax(0,1fr) auto;column-gap:4px;row-gap:4px;padding:6px}
+.table-focus:has(> .own-cards > button:only-child){grid-template-columns:minmax(0,1fr) auto}
+.table-focus:has(> .own-cards > button:only-child) .turn-heading{grid-column:1;grid-row:1}
+.table-focus:has(> .own-cards > button:only-child)>.focus-controls{grid-column:2;grid-row:1}
+.table-focus:has(> .own-cards > button:only-child) .turn-actions{grid-column:1/-1;grid-row:auto}
+.table-focus:has(> .own-cards > button:only-child) .own-cards{grid-column:1/-1;grid-row:auto}
+.table-focus h2{font-size:19px}.focus-controls{flex-wrap:wrap}.focus-controls ::deep .turn-clock strong{font-size:19px}.focus-controls ::deep .turn-clock span{font-size:8px;letter-spacing:0}
+.own-cards{grid-template-columns:minmax(0,1fr)}.table-app .own-cards button{font-size:12px}.workflow button{min-width:100px}.workflow ::deep .speaker-picker{min-width:130px}
+.pick-console{grid-template-columns:minmax(0,1fr);padding:5px}.pick-console h2{font-size:16px;grid-column:1;grid-row:1}.pick-progress{grid-column:1;grid-row:2}.pick-console>.table-primary{grid-column:1;grid-row:4;max-width:none}.table-card-grid{grid-row:3;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.table-card-grid button{font-size:10px;padding:3px}
+}
+@media(orientation:landscape) and (min-width:1600px){
+.table-top:has(.table-identity){grid-template-columns:54px minmax(220px,1fr) auto auto;gap:18px;min-height:56px}
+.table-top .table-identity{max-width:430px;gap:10px}.table-top .table-identity h1{font-size:20px;line-height:25px}.table-top .table-identity p{font-size:14px;line-height:19px}.table-top .table-portrait{width:38px;height:46px}.table-top .table-initiative{font-size:27px;line-height:30px}.table-top .table-initiative small{font-size:9px;line-height:12px}
+.table-top:has(.table-identity) .table-meta{font-size:15px;gap:18px}.play-grid{gap:18px}.table-focus{padding:14px;row-gap:10px}.table-focus h2{font-size:30px}.focus-controls ::deep .turn-clock strong{font-size:28px}.own-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.pick-console h2{font-size:24px}.table-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.table-card-grid button{font-size:16px}
 }

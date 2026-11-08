@@ -41,6 +41,8 @@ COPY --from=build /out/ ./
 COPY --from=build /src/Ti4Companion.ApiService/ti4master.db /app/seed/ti4master.db
 COPY LICENSE THIRD-PARTY-NOTICES.md ./
 COPY --chmod=755 deploy/docker-entrypoint.sh /usr/local/bin/ti4-entrypoint
+# Enforce executable mode even on builders that do not retain COPY --chmod metadata.
+RUN chmod 0755 /usr/local/bin/ti4-entrypoint
 USER $APP_UID
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

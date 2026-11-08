@@ -7,8 +7,15 @@
 <main lang="en" class="table-app @(ShowTools?"has-tools":"") @(Store.Me?.Id==Store.Session?.ActivePlayerId&&Store.Session?.Phase==GamePhase.Action?"is-my-turn":"")" style="--seat:@(Store.Me?.ColorHex??"#4a90d9")">
     <header class="table-top">
         <a class="table-home" href="/prototype.html" target="_top" aria-label="TI4-Agent Table Companion"><img src="/assets/ti4-agent/favicon.svg" width="28" height="28" alt="" /><span class="table-brand">TI4-Agent<small>TABLE COMPANION</small></span></a>
+        @if(ShowTools && Store.Session is {} identitySession && Store.Me is {} identityPlayer){
+            <section class="table-identity" aria-label="Your player">
+                <div class="table-portrait"><PrototypeFactionArt FactionId="@identityPlayer.FactionId" Name="@(Store.Faction(identityPlayer.FactionId)?.Name??"Choose your faction")" /></div>
+                <div><h1 title="@identityPlayer.Name">@identityPlayer.Name</h1><p title="@(Store.Faction(identityPlayer.FactionId)?.Name??"Choose your faction")">@(Store.Faction(identityPlayer.FactionId)?.Name??"Choose your faction")</p></div>
+                <span class="table-initiative" aria-label="Your initiative">@(identityPlayer.Initiative?.ToString()??"—")<small>INITIATIVE</small></span>
+            </section>
+        }
         @if(loaded && Store.Session is {} headerSession){<div class="table-meta"><span>ROUND @headerSession.CurrentRound</span><span>@Phase(headerSession.Phase)</span><span>@headerSession.JoinCode</span></div>}
-        <div class="table-tools"><span class="table-live">@(Store.Connected?"● Live":HasCode?"○ Connecting":"NEW SESSION")</span></div>
+        <div class="table-tools"><span class="table-live">@(Store.Connected?"● Live":HasCode?"○ Connecting":"NEW SESSION")</span>@if(ShowTools){<PrototypeTurnAttention Active="@(Store.Me?.Id==Store.Session?.ActivePlayerId&&Store.Session?.Phase==GamePhase.Action)" />}</div>
     </header>
     @if(error is not null){<p role="alert" class="table-error">@error</p>}
     @if(!loaded){<p>Loading your session …</p>}
@@ -21,11 +28,12 @@
     }
     else{
         var me=Store.Me;var mine=me.Id==s.ActivePlayerId;var active=Store.PlayerById(s.ActivePlayerId);
-        <PrototypeToolsRail Session="s" IsHost="Store.IsHost" />
-        <section class="table-identity"><div class="table-portrait"><PrototypeFactionArt FactionId="@me.FactionId" Name="@(Store.Faction(me.FactionId)?.Name??"Choose your faction")" /></div><div><h1>@me.Name</h1><p>@(Store.Faction(me.FactionId)?.Name??"Choose your faction")</p></div><span class="table-initiative">@(me.Initiative?.ToString()??"—")<small>INITIATIVE</small></span></section>
+        <PrototypeToolsRail Session="s" />
         @if(s.Phase==GamePhase.Setup){<PrototypeTableSetup />}
         else if(s.Phase is GamePhase.Strategy or GamePhase.Action){
-            <div class="play-grid"><div class="turn-main">
+            <div class="play-grid">
+            <aside class="order-zone" aria-label="Faction order zone"><PrototypeInitiativeWheel Session="s" FocusPlayerId="@(s.Phase == GamePhase.Strategy ? Store.CurrentPickerId : s.ActivePlayerId)" /></aside>
+            <div class="turn-main" aria-label="Turn actions zone">
             @if(s.Phase==GamePhase.Strategy){
                 var picker=Store.PlayerById(Store.CurrentPickerId);var count=GameRules.StrategyCardsPerPlayer(s.Players.Count,s.StrategyCardsPerPlayer);
                 <section class="table-panel pick-console"><p class="table-kicker">STRATEGY DRAFT · @count EACH</p><h2>@(picker?.Id==me.Id?"Your pick":picker is null?"Ready to start":$"{picker.Name} picks")</h2>
@@ -60,12 +68,11 @@
                 </section>
                 @if(Store.IsHost&&s.Players.All(p=>p.HasPassed)){<button class="table-primary" disabled="@busy" @onclick="StatusPhase">Start status phase →</button>}
             }
-            <PrototypeInitiativeWheel Session="s" FocusPlayerId="@(s.Phase == GamePhase.Strategy ? Store.CurrentPickerId : s.ActivePlayerId)" />
-            </div><aside><PrototypeStrategyBoard /></aside></div>
+            </div><aside class="strategy-zone" aria-label="Strategy overview zone"><PrototypeStrategyBoard /></aside></div>
         }
         else if (s.Phase == GamePhase.Status)
         {
-            <section class="table-panel"><p class="table-kicker">WRAP UP THE ROUND</p>
+            <section class="table-panel status-panel"><p class="table-kicker">WRAP UP THE ROUND</p>
             @if (s.StatusStage == StatusStage.Scoring)
             { <h2>Score objectives.</h2><p>@(Store.PlayerById(s.StatusScorerId)?.Name ?? "Everyone is done") · in initiative order</p><p>Check and score your public and secret objectives at the table.</p>
             @if (s.StatusScorerId == me.Id) { <button class="table-primary" disabled="@busy" @onclick="ScoreDone">Scoring complete</button> }
@@ -73,12 +80,12 @@
             else if (s.StatusStage == StatusStage.RevealObjective)
             { <h2>Reveal a new objective.</h2><p>Reveal the next public objective at the table.</p>@if (Store.IsHost) { <button class="table-primary" disabled="@busy" @onclick="ChecklistStage">Objective revealed →</button> } }
             else
-            { <h2>Ready for round @(s.CurrentRound + 1)?</h2>@foreach (var step in Steps) { var done = s.StatusStepsDone.HasFlag(step.Item1); <button class="table-check" disabled="@(busy || !Store.IsHost)" @onclick="() => Check(step.Item1,!done)"><span>@(done ? "✓" : "○")</span>@step.Item2</button> }
-              @if (Store.IsHost) { <label class="table-agenda"><input type="checkbox" @bind="agendaDone" /> Resolve the agenda phase at the table if needed, then confirm. If no agenda is needed, confirm to continue.</label><button class="table-primary" disabled="@(busy || !agendaDone || Steps.Any(x => !s.StatusStepsDone.HasFlag(x.Item1)))" @onclick="NextRound">Next round →</button> } }
+            { <h2>Ready for round @(s.CurrentRound + 1)?</h2><div class="status-checks">@foreach (var step in Steps) { var done = s.StatusStepsDone.HasFlag(step.Item1); <button class="table-check" disabled="@(busy || !Store.IsHost)" @onclick="() => Check(step.Item1,!done)"><span>@(done ? "✓" : "○")</span>@step.Item2</button> }</div>
+              @if (Store.IsHost) { <div class="status-progression"><label class="table-agenda"><input type="checkbox" @bind="agendaDone" /> Resolve the agenda phase at the table if needed, then confirm. If no agenda is needed, confirm to continue.</label><button class="table-primary" disabled="@(busy || !agendaDone || Steps.Any(x => !s.StatusStepsDone.HasFlag(x.Item1)))" @onclick="NextRound">Next round →</button></div> } }
             </section>
         }
 
-        <footer class="table-foot"><span>@(Store.IsHost?"Host":"Player") · No turn time limit</span><PrototypeTurnAttention Active="@(mine&&s.Phase==GamePhase.Action)" /></footer>
+        <footer class="table-foot"><span>@(Store.IsHost?"Host":"Player") · No turn time limit</span></footer>
     }
 </main>
 

@@ -1,6 +1,6 @@
 @inherits Ti4ComponentBase
 
-@if (Store.Session is { } s && (Store.IsHost || (Politics && Store.MyPlayerId == s.ActivePlayerId)))
+@if (Store.Session is { } s && (Store.IsHost || (SharedAdmin && Store.Me is not null) || (Politics && Store.MyPlayerId == s.ActivePlayerId)))
 {
     <label class="speaker-picker">@(Politics ? "Pass the Speaker token" : "Starting Speaker")
         <select aria-label="@(Politics ? "New Speaker" : "Starting Speaker")" value="@(Politics ? "" : s.SpeakerPlayerId?.ToString())"
@@ -17,6 +17,7 @@
 
 @code {
     [Parameter] public bool Politics { get; set; }
+    [Parameter] public bool SharedAdmin { get; set; }
     bool busy;
     string? error;
     async Task Choose(ChangeEventArgs args)

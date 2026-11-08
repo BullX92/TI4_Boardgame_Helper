@@ -1,14 +1,14 @@
 @inherits Ti4ComponentBase
 @inject NavigationManager Nav
 <section class="create-session">
-    <p class="eyebrow">GET YOUR TABLE READY</p><h1>Create a session</h1>
+    <div class="create-intro"><p class="eyebrow">GET YOUR TABLE READY</p><h1>Create a session</h1>
     <p>Set the player count, names and colors. Everyone chooses their seat and faction after joining.</p>
     <label>Number of players<select aria-label="Number of players" value="@names.Count" @onchange="Resize">@for(var i=3;i<=8;i++){<option value="@i">@i players</option>}</select></label>
-    <div class="player-names">@for(var i=0;i<names.Count;i++){var seat=i;<label>Player @(i+1)<input aria-label="Player @(i+1) name" value="@names[i]" @oninput="e=>names[seat]=e.Value?.ToString()??string.Empty" placeholder="Name" maxlength="40" /></label><label>Color<select aria-label="Player @(i+1) color" value="@colors[i]" @onchange="e=>SetColor(seat,e)">@foreach(var color in Palette){<option value="@color.Item2">@color.Item1</option>}</select></label>}</div>
+    </div><div class="create-form"><div class="player-names" tabindex="0" aria-label="Player names and colors, scroll for all players">@for(var i=0;i<names.Count;i++){var seat=i;<label>Player @(i+1)<input aria-label="Player @(i+1) name" value="@names[i]" @oninput="e=>names[seat]=e.Value?.ToString()??string.Empty" placeholder="Name" maxlength="40" /></label><label>Color<select aria-label="Player @(i+1) color" value="@colors[i]" @onchange="e=>SetColor(seat,e)">@foreach(var color in Palette){<option value="@color.Item2">@color.Item1</option>}</select></label>}</div>
     <p class="card-count">@(names.Count<=4 ? "2 strategy cards each" : "1 strategy card each") · clockwise picks</p>
     @if(error is not null){<p class="error" role="alert">@error</p>}
     <button class="primary" disabled="@(busy||!Valid)" @onclick="Create">Create session →</button>
-    <details><summary>Already invited?</summary><label>Session code<input aria-label="Session code" @bind="code" @bind:event="oninput" maxlength="5" /></label><button disabled="@(busy||code.Trim().Length!=5)" @onclick="Join">Choose my player →</button></details>
+    </div><details><summary>Already invited?</summary><label>Session code<input aria-label="Session code" @bind="code" @bind:event="oninput" maxlength="5" /></label><button disabled="@(busy||code.Trim().Length!=5)" @onclick="Join">Choose my player →</button></details>
 </section>
 @code{
     [Parameter] public int Device {get;set;}

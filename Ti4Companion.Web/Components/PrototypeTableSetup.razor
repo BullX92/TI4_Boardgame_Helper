@@ -4,7 +4,7 @@
 @if (Store.Session is { } s && Store.Me is { } me)
 {
     <section class="setup-panel">
-        <p class="setup-kicker">YOUR PLAYER · @me.Name</p><h2>Choose your faction</h2>
+        <div class="setup-choice"><p class="setup-kicker">YOUR PLAYER · @me.Name</p><h2>Choose your faction</h2>
         <label class="faction-label">Your faction
             <select aria-label="Your faction" value="@(me.FactionId??"")" disabled="@(busy||me.IsReady)" @onchange="ChooseFaction">
                 <option value="">Choose a faction</option>
@@ -18,7 +18,7 @@
             <div><strong>@s.JoinCode</strong><p>Scan the code or open the invite link.</p><a href="@InviteUrl" target="_blank" rel="noopener">Open invite ↗</a></div></div>
             @if (new Uri(Nav.BaseUri).IsLoopback) { <p class="local-note">Local preview: this link works on this computer. Use a shared network address for phones.</p> }
         </details>
-        <div class="seats-heading"><span>CLOCKWISE SEAT ORDER</span><span>@s.Players.Count / 8</span></div>
+        </div><div class="setup-roster" tabindex="0" aria-label="Seat order, scroll for all players"><div class="seats-heading"><span>CLOCKWISE SEAT ORDER</span><span>@s.Players.Count / 8</span></div>
         @foreach (var p in s.Players.OrderBy(p => p.SeatOrder))
         {
             var seats = s.Players.OrderBy(x => x.SeatOrder).ToList();
@@ -29,13 +29,13 @@
             { <div class="seat-move"><button aria-label="Move @p.Name earlier" disabled="@(busy || index == 0)" @onclick="() => Move(p.Id,-1)">↑</button><button aria-label="Move @p.Name later" disabled="@(busy || index == seats.Count - 1)" @onclick="() => Move(p.Id,1)">↓</button></div> }
             </div>
         }
-        @if (Store.IsHost) { <PrototypeSpeakerPicker /> }
+        </div><div class="setup-progress">@if (Store.IsHost) { <PrototypeSpeakerPicker /> }
         else { <p class="speaker-note">Speaker: @(Store.PlayerById(s.SpeakerPlayerId)?.Name ?? "Waiting for the host")</p> }
         <button class="ready-button" disabled="@(busy||string.IsNullOrWhiteSpace(me.FactionId))" @onclick="() => Ready(!me.IsReady)">@(me.IsReady ? "✓ Ready · tap to undo" : "I am ready")</button>
         @if (Store.IsHost)
         { <button class="start-button" disabled="@(busy || s.Players.Count < 2 || s.SpeakerPlayerId is null || s.Players.Any(p => !p.IsReady))" @onclick="Start">Start strategy phase →</button><p class="setup-hint">Choose the Speaker and wait until everyone is ready.</p> }
         else { <p class="setup-hint">The host starts the round when everyone is ready.</p> }
-    </section>
+    </div></section>
 }
 
 @code {

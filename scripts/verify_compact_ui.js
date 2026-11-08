@@ -125,7 +125,10 @@ async page => {
     await second.locator('.table-focus').waitFor();
     await second.getByRole('button',{name:'Open table tools',exact:true}).click();
     await second.locator('.table-tools-dialog[open]').waitFor();
-    check(await second.locator('.table-tools-dialog').getByRole('button',{name:/Admin/}).count() === 0, 'Non-hosts must not see an Admin option');
+    check(await second.locator('.table-tools-dialog').getByRole('button',{name:/Admin/}).count() === 1, 'Every seated player must see an Admin option');
+    await second.locator('.table-tools-dialog').getByRole('button',{name:/Admin/}).click();
+    await second.getByRole('region',{name:'Admin panel',exact:true}).waitFor();
+    check(await second.getByRole('button',{name:"End Jakob's turn →",exact:true}).isVisible(), 'Nonhost sees the active player admin action');
     await second.keyboard.press('Escape');
     const third = await page.context().newPage();
     await third.setViewportSize({width:844,height:390});
@@ -211,7 +214,9 @@ async page => {
             await page.waitForFunction(id => document.querySelector('.initiative-wheel')?.dataset.focusPlayer === id, ids[1]);
             check((await page.locator('.wheel-slot').evaluateAll(slots => slots.filter(s => Number(s.dataset.rank)>=0).map(s=>s.dataset.playerId))).every(id=>id!==ids[0]), 'Passed players must be skipped by the wheel');
             const duration = await page.locator('.wheel-figure').first().evaluate(el=>getComputedStyle(el).transitionDuration);
-            check(duration.startsWith('1.8s'), 'The real animation must last 1800ms');
+            // A responsive reflow retargets within the original deadline, not a fresh 1800ms.
+            const remainingMs = parseFloat(duration) * 1000;
+            check((await page.locator('.initiative-wheel').getAttribute('data-duration')) === '1800' && remainingMs > 0 && remainingMs <= 1800, 'Turn animation must retain its configured 1800ms deadline');
             await call(path + '/turn/advance', undefined, tokens[1]);
             await call(path + '/turn/advance', undefined, tokens[2]);
             await page.waitForFunction(id => document.querySelector('.initiative-wheel')?.dataset.focusPlayer === id, ids[3]);
