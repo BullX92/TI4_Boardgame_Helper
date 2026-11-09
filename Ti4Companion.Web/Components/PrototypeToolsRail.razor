@@ -13,6 +13,11 @@
                 <div class="tools-nav-heading"><span>TOOLS</span><button class="tools-close" type="button" aria-label="Close table tools" autofocus @onclick="Close">×</button></div>
                 <button class="tools-option @(selected == "times" ? "selected" : "")" type="button" aria-pressed="@((selected == "times").ToString().ToLowerInvariant())" @onclick="ShowTimes"><span aria-hidden="true">⏱</span><span>Player times</span></button>
                 <button class="tools-option @(selected == "admin" ? "selected" : "")" type="button" aria-pressed="@((selected == "admin").ToString().ToLowerInvariant())" @onclick="ShowAdmin"><span aria-hidden="true">⚙</span><span>Admin</span></button>
+                @* Native JS handles the tap directly, preserving the browser's user activation. *@
+                <button class="tools-option tools-fullscreen" type="button" aria-pressed="false" disabled>
+                    <span aria-hidden="true">⛶</span><span data-fullscreen-label>Vollbild</span>
+                </button>
+                <p class="tools-fullscreen-status" role="status" aria-live="polite" hidden></p>
                 <PrototypeTurnAttention Active="Active" />
                 <a class="tools-home" href="/prototype.html" target="_top">← Table home</a>
             </nav>

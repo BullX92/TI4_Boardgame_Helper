@@ -9,9 +9,11 @@
 .tools-dock{position:absolute;inset:0 auto 0 0;width:min(176px,100%);display:grid;grid-template-columns:minmax(0,1fr);background:#0f1c2d;border-right:1px solid #4a6686;box-shadow:8px 0 30px #0009;animation:tools-reveal 160ms ease-out}
 .tools-dock.has-panel{width:min(520px,100%);grid-template-columns:128px minmax(0,1fr)}
 .tools-nav{min-width:0;padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overflow-y:auto;background:linear-gradient(180deg,#15283e,#0f1c2d)}
-.tools-nav-heading{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;color:#9ebbd8;font-size:9px;letter-spacing:.1em}
+.tools-nav-heading{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px;background:#15283e;color:#9ebbd8;font-size:9px;letter-spacing:.1em}
 .tools-close,.tools-panel-close{flex:none;width:44px;height:44px;padding:0;margin:0;border:1px solid #405d7c;border-radius:6px;background:#1c334d;color:#e4f0ff;font:24px/1 Inter,system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
-.tools-option{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;margin:0 0 6px;padding:10px 8px;text-align:left;border:1px solid #36506e;border-radius:6px;background:#192d45;color:#dcecff;font:600 12px/1.3 Inter,system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
+.tools-option{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin:0 0 4px;padding:8px;text-align:left;border:1px solid #36506e;border-radius:6px;background:#192d45;color:#dcecff;font:600 12px/1.3 Inter,system-ui,sans-serif;cursor:pointer;touch-action:manipulation}
+.tools-fullscreen:disabled{cursor:not-allowed;opacity:.65}.tools-fullscreen[aria-pressed="true"]{border-color:#73afe9;background:#244764}
+.tools-fullscreen-status{margin:0 0 6px;font:11px/1.3 system-ui;color:#ffd0b6;overflow-wrap:anywhere}
 .tools-option>span:first-child{font-size:18px;flex:none}.tools-option>span:last-child{min-width:0;overflow-wrap:anywhere}
 .tools-home{display:flex;align-items:center;min-height:44px;min-width:44px;margin-top:6px;padding:6px 8px;color:#a7c6e5;font-size:11px;text-decoration:none;border:1px solid #36506e;border-radius:6px}.tools-home:hover{background:#192d45;border-color:#8dc7ff}
 .tools-option.selected{background:#2a5077;border-color:#73afe9;box-shadow:inset 2px 0 #8dc7ff}.tools-option:hover{border-color:#8dc7ff}
