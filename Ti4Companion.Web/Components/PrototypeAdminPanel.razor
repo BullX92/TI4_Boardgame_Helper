@@ -44,7 +44,7 @@
     async Task Add(){if(busy)return;busy=true;error=null;try{var r=await Store.Api.JoinSessionAsync(Session.Id,new(newName.Trim(),null,newColor,null,null,true));if(r is null){error="Could not add player. Check the name and color.";await Store.RefreshAsync();}else{await Store.Mutate(Task.FromResult<SessionStateDto?>(r.Session));newName="";newColor="";}}catch{error="Could not reach the table.";}finally{busy=false;}}
     async Task Remove(Guid id){await Change(()=>Store.Api.AdminRemovePlayerAsync(Session.Id,id));removeId=null;}
     Task Pick(Guid id,int card)=>Change(()=>Store.Api.AssignStrategyCardAsync(Session.Id,id,card));
-    Task Advance()=>Change(()=>Store.Api.AdvanceTurnAsync(Session.Id));
+    Task Advance()=>Change(()=>Store.Api.AdvanceTurnAsync(Session.Id, Session.ActivePlayerId, Session.WorkerRevision));
     Task Pass(Guid id)=>Change(()=>Store.Api.SetPassedAsync(Session.Id,id,true));
     Task Play(int card)=>Change(()=>Store.Api.SetActiveStrategyAsync(Session.Id,card));
     Task CompletePrimary()=>Change(()=>Store.Api.CompletePrimaryAsync(Session.Id,Session.ActiveStrategyCardId!.Value,Session.StrategyActionId));

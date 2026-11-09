@@ -299,7 +299,8 @@ public record SessionStateDto(
     Guid? UndoActionId = null,
     string? UndoDescription = null,
     string? UndoUnavailableReason = null,
-    Guid? StrategyActionId = null);
+    Guid? StrategyActionId = null,
+    long WorkerRevision = 0);
 
 /// <summary>A single match-log event. Structured (not pre-rendered) so the client localizes it and
 /// the statistics view diffs the timeline kinds for durations. See <see cref="SessionLogKind"/>.</summary>

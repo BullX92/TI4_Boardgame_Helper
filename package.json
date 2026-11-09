@@ -1,0 +1,12 @@
+{
+  "name": "ti4-sites-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash sites-worker/build.sh",
+    "test": "node --test sites-worker/worker.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

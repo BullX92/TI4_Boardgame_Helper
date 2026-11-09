@@ -70,14 +70,18 @@ public class Ti4ApiClient(HttpClient http)
     /// The two used to be indistinguishable, and the caller treated both as "no session": a single
     /// throttled read then blanked a running game into the loading screen.
     /// </para></summary>
-    public async Task<(SessionStateDto? Session, bool Gone)> ReadSessionAsync(string code)
+    public async Task<(SessionStateDto? Session, bool Gone)> ReadSessionAsync(
+        string code, long revision = 0, CancellationToken cancellationToken = default)
     {
-        var resp = await http.GetAsync($"api/sessions/{code}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/sessions/{code}");
+        if (revision > 0) request.Headers.IfNoneMatch.Add(new($"\"{revision}\""));
+        using var resp = await http.SendAsync(request, cancellationToken);
+        if (resp.StatusCode == HttpStatusCode.NotModified) return (null, false);
         if (resp.StatusCode == HttpStatusCode.NotFound) return (null, true);
         // Never throw into the hub callback / UI event handler.
         if (resp.StatusCode == HttpStatusCode.TooManyRequests) return (null, false);
         resp.EnsureSuccessStatusCode();
-        return (await resp.Content.ReadFromJsonAsync<SessionStateDto>(), false);
+        return (await resp.Content.ReadFromJsonAsync<SessionStateDto>(cancellationToken), false);
     }
 
     public Task<JoinResultDto?> CreateSessionAsync(CreateSessionRequest req)
@@ -109,7 +113,12 @@ public class Ti4ApiClient(HttpClient http)
         => PostFor($"api/sessions/{id}/active-strategy", new SetActiveStrategyCardRequest(cardId));
     public Task<SessionStateDto?> SetActivePlayerAsync(Guid id, Guid? playerId)
         => PostFor($"api/sessions/{id}/turn/active", new SetActivePlayerRequest(playerId));
-    public Task<SessionStateDto?> AdvanceTurnAsync(Guid id) => PostFor<SessionStateDto>($"api/sessions/{id}/turn/advance", null);
+    public Task<SessionStateDto?> AdvanceTurnAsync(Guid id, Guid? expectedPlayerId = null, long expectedRevision = 0)
+#if SITES_WORKER
+        => PostFor($"api/sessions/{id}/turn/advance", new { expectedPlayerId, expectedRevision });
+#else
+        => PostFor<SessionStateDto>($"api/sessions/{id}/turn/advance", null);
+#endif
     public Task<SessionStateDto?> PreviousTurnAsync(Guid id) => PostFor<SessionStateDto>($"api/sessions/{id}/turn/previous", null);
     public Task<SessionStateDto?> CompletePrimaryAsync(Guid id, int card, Guid? actionId = null)
         => PostFor($"api/sessions/{id}/primary/complete", new CompletePrimaryRequest(card, actionId));

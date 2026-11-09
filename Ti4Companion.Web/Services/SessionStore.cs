@@ -10,7 +10,11 @@ namespace Ti4Companion.Web.Services;
 /// Holds the shared session state and this device's identity, keeps a SignalR connection alive
 /// (with auto-reconnect), and persists enough to resume a session across reloads.
 /// </summary>
-public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, NavigationManager nav) : IAsyncDisposable
+public partial class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc
+#if !SITES_WORKER
+    , NavigationManager nav
+#endif
+) : IAsyncDisposable
 {
     private const string KeyDevice = "ti4.device";
     private const string KeyCode = "ti4.code";      // legacy single session; only read now, for the carry-over
@@ -31,7 +35,11 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
     public SessionStateDto? Session { get; private set; }
     public Guid? MyPlayerId { get; private set; }
     public string? DeviceToken { get; private set; }
+#if SITES_WORKER
+    public bool Connected => _sitesConnected;
+#else
     public bool Connected => _hub?.State == HubConnectionState.Connected;
+#endif
 
     public event Action? OnChange;
 
@@ -503,6 +511,9 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
         var s = await apiCall;
         if (s is not null)
         {
+#if SITES_WORKER
+            if (Session is { } current && (s.Id != current.Id || s.WorkerRevision < current.WorkerRevision)) return;
+#endif
             Session = s;
             await RefreshLogAsync();
             OnChange?.Invoke();
@@ -510,10 +521,13 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
         else await RefreshAsync();
     }
 
-    public async Task RefreshAsync()
+    public Task RefreshAsync() => RefreshAsync(default);
+
+    private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        if (Session is null) return;
-        var (fresh, gone) = await api.ReadSessionAsync(Session.JoinCode);
+        if (Session is not { } previous) return;
+        var (fresh, gone) = await api.ReadSessionAsync(previous.JoinCode, previous.WorkerRevision, cancellationToken);
+        if (Session is not { } current || previous.Id != current.Id || cancellationToken.IsCancellationRequested) return;
         if (gone)
         {
             // The session was deleted while this device was in it — the host ended and closed the game, or
@@ -535,7 +549,7 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
         }
         // A throttled read (429) says nothing about the session — keep what we have and wait for the next
         // change. Overwriting it with null was the same infinite loading screen, one rate limit later.
-        if (fresh is null) return;
+        if (fresh is null || fresh.WorkerRevision < current.WorkerRevision) return;
         Session = fresh;
         await AdoptSeatAsync(fresh);
         await RefreshLogAsync();
@@ -597,6 +611,9 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
     /// </summary>
     public async Task LeaveAsync()
     {
+#if SITES_WORKER
+        StopSitesPolling();
+#endif
         if (_hub is not null)
         {
             try { if (_joinedCode is not null) await _hub.InvokeAsync("LeaveSession", _joinedCode); } catch { }
@@ -634,6 +651,7 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
         if (string.IsNullOrEmpty(stored)) loc.SetLanguage(s.DefaultLanguage);
     }
 
+#if !SITES_WORKER
     private async Task EnsureHubAsync(string code)
     {
         if (_hub is null)
@@ -675,6 +693,7 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
         try { await _hub.InvokeAsync("JoinSession", code); } catch { }
         _joinedCode = code;
     }
+#endif
 
     // ---- Content lookups ----
     private Expansion Active => Session?.ActiveExpansions ?? Expansion.Base;
@@ -769,6 +788,9 @@ public class SessionStore(Ti4ApiClient api, BrowserStorage storage, Loc loc, Nav
 
     public async ValueTask DisposeAsync()
     {
+#if SITES_WORKER
+        StopSitesPolling();
+#endif
         if (_hub is not null) await _hub.DisposeAsync();
     }
 }

@@ -58,3 +58,7 @@ __pycache__/
 /xcf/
 /Resources/
 /References/
+
+# Sites Worker build
+/dist/
+/node_modules/

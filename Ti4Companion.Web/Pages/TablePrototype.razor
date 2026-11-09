@@ -101,7 +101,7 @@
     Guid Id => Store.Session!.Id;
     Task Pick(Guid player,int card) => Mutate(()=>Store.Api.AssignStrategyCardAsync(Id,player,card));
     Task ActionPhase() => Mutate(()=>Store.Api.StartActionPhaseAsync(Id));
-    Task Advance() => Mutate(()=>Store.Api.AdvanceTurnAsync(Id));
+    Task Advance() => Mutate(()=>Store.Api.AdvanceTurnAsync(Id, Store.Session!.ActivePlayerId, Store.Session.WorkerRevision));
     Task Pass() => Mutate(()=>Store.Api.SetPassedAsync(Id,Store.Me!.Id,true));
     Task Play(int card) => Mutate(()=>Store.Api.SetActiveStrategyAsync(Id,card));
     Task CompletePrimary() => Mutate(()=>Store.Api.CompletePrimaryAsync(Id,Store.Session!.ActiveStrategyCardId!.Value,Store.Session.StrategyActionId));
