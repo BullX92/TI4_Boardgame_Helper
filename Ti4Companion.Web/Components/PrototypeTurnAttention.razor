@@ -1,11 +1,73 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
-<button type="button" class="wake-status @(awake ? "is-awake" : "")" @onclick="Enable">@(awake ? "◉ Screen kept awake" : "☼ Keep screen awake")</button>
-@code{
-    [Parameter] public bool Active {get;set;}
-    IJSObjectReference? module; DotNetObjectReference<PrototypeTurnAttention>? callback; bool awake;
-    protected override async Task OnAfterRenderAsync(bool firstRender){try{if(firstRender){module=await JS.InvokeAsync<IJSObjectReference>("import","/prototype-turn-attention.js");callback=DotNetObjectReference.Create(this);await module.InvokeVoidAsync("connect",callback);}if(module is not null)await module.InvokeVoidAsync("update",Active);}catch{}}
-    async Task Enable(){if(module is not null)await module.InvokeVoidAsync("request");}
-    [JSInvokable]public Task WakeChanged(bool value){awake=value;return InvokeAsync(StateHasChanged);}
-    public async ValueTask DisposeAsync(){try{if(module is not null){await module.InvokeVoidAsync("disconnect");await module.DisposeAsync();}}catch{}callback?.Dispose();}
+
+<div class="wake-control">
+    <button type="button" class="wake-status @(awake ? "is-awake" : "")" role="switch"
+            aria-checked="@(awake ? "true" : "false")" aria-label="Screen awake"
+            aria-describedby="@(!available ? hintId : null)" disabled="@(!available)" @onclick="Toggle">
+        <span>Screen awake</span>
+        <span class="wake-value" aria-hidden="true">@(awake ? "On" : "Off")</span>
+    </button>
+    @if (!available)
+    {
+        <small id="@hintId" class="wake-hint">Unavailable: requires HTTPS and a supported browser.</small>
+    }
+</div>
+
+@code {
+    [Parameter] public bool Active { get; set; }
+
+    readonly string hintId = $"wake-hint-{Guid.NewGuid():N}";
+    IJSObjectReference? module;
+    DotNetObjectReference<PrototypeTurnAttention>? callback;
+    bool awake;
+    bool available;
+    bool disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (disposed) return;
+        try
+        {
+            if (firstRender)
+            {
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "/prototype-turn-attention.js");
+                if (disposed) { await module.DisposeAsync(); return; }
+                callback = DotNetObjectReference.Create(this);
+                available = await module.InvokeAsync<bool>("connect", callback);
+                await InvokeAsync(StateHasChanged);
+            }
+            if (module is not null) await module.InvokeVoidAsync("update", Active);
+        }
+        catch { /* JS may be unavailable during navigation or prerendering. */ }
+    }
+
+    async Task Toggle()
+    {
+        if (module is not null && available)
+            await module.InvokeVoidAsync(awake ? "release" : "request");
+    }
+
+    [JSInvokable]
+    public Task WakeChanged(bool value)
+    {
+        if (disposed) return Task.CompletedTask;
+        awake = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        try
+        {
+            if (module is not null)
+            {
+                await module.InvokeVoidAsync("disconnect");
+                await module.DisposeAsync();
+            }
+        }
+        catch { /* The browser connection may already be closed. */ }
+        callback?.Dispose();
+    }
 }

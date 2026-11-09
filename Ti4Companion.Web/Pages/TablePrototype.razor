@@ -5,18 +5,7 @@
 @inject NavigationManager Nav
 <PageTitle>TI4 · Table Companion</PageTitle>
 <main lang="en" class="table-app @(ShowTools?"has-tools":"") @(Store.Me?.Id==Store.Session?.ActivePlayerId&&Store.Session?.Phase==GamePhase.Action?"is-my-turn":"")" style="--seat:@(Store.Me?.ColorHex??"#4a90d9")">
-    <header class="table-top">
-        <a class="table-home" href="/prototype.html" target="_top" aria-label="TI4-Agent Table Companion"><img src="/assets/ti4-agent/favicon.svg" width="28" height="28" alt="" /><span class="table-brand">TI4-Agent<small>TABLE COMPANION</small></span></a>
-        @if(ShowTools && Store.Session is {} identitySession && Store.Me is {} identityPlayer){
-            <section class="table-identity" aria-label="Your player">
-                <div class="table-portrait"><PrototypeFactionArt FactionId="@identityPlayer.FactionId" Name="@(Store.Faction(identityPlayer.FactionId)?.Name??"Choose your faction")" /></div>
-                <div><h1 title="@identityPlayer.Name">@identityPlayer.Name</h1><p title="@(Store.Faction(identityPlayer.FactionId)?.Name??"Choose your faction")">@(Store.Faction(identityPlayer.FactionId)?.Name??"Choose your faction")</p></div>
-                <span class="table-initiative" aria-label="Your initiative">@(identityPlayer.Initiative?.ToString()??"—")<small>INITIATIVE</small></span>
-            </section>
-        }
-        @if(loaded && Store.Session is {} headerSession){<div class="table-meta"><span>ROUND @headerSession.CurrentRound</span><span>@Phase(headerSession.Phase)</span><span>@headerSession.JoinCode</span></div>}
-        <div class="table-tools"><span class="table-live">@(Store.Connected?"● Live":HasCode?"○ Connecting":"NEW SESSION")</span>@if(ShowTools){<PrototypeTurnAttention Active="@(Store.Me?.Id==Store.Session?.ActivePlayerId&&Store.Session?.Phase==GamePhase.Action)" />}</div>
-    </header>
+    @if (!ShowTools) { <PrototypeTableHeader Session="@(loaded && HasCode ? Store.Session : null)" HasCode="HasCode" /> }
     @if(error is not null){<p role="alert" class="table-error">@error</p>}
     @if(!loaded){<p>Loading your session …</p>}
     else if(!HasCode||Store.Session is not {} s){<PrototypeCreateSession Device="Device" />}
@@ -28,12 +17,14 @@
     }
     else{
         var me=Store.Me;var mine=me.Id==s.ActivePlayerId;var active=Store.PlayerById(s.ActivePlayerId);
-        <PrototypeToolsRail Session="s" />
+        <PrototypeToolsRail Session="s" Active="@(mine && s.Phase == GamePhase.Action)" />
+        @if (s.Phase is not (GamePhase.Strategy or GamePhase.Action)) { <PrototypeTableHeader Session="s" Player="me" HasCode="true" /> }
         @if(s.Phase==GamePhase.Setup){<PrototypeTableSetup />}
         else if(s.Phase is GamePhase.Strategy or GamePhase.Action){
             <div class="play-grid">
             <aside class="order-zone" aria-label="Faction order zone"><PrototypeInitiativeWheel Session="s" FocusPlayerId="@(s.Phase == GamePhase.Strategy ? Store.CurrentPickerId : s.ActivePlayerId)" /></aside>
             <div class="turn-main" aria-label="Turn actions zone">
+            <PrototypeTableHeader Session="s" Player="me" HasCode="true" />
             @if(s.Phase==GamePhase.Strategy){
                 var picker=Store.PlayerById(Store.CurrentPickerId);var count=GameRules.StrategyCardsPerPlayer(s.Players.Count,s.StrategyCardsPerPlayer);
                 <section class="table-panel pick-console"><p class="table-kicker">STRATEGY DRAFT · @count EACH</p><h2>@(picker?.Id==me.Id?"Your pick":picker is null?"Ready to start":$"{picker.Name} picks")</h2>
@@ -123,5 +114,4 @@
     Task Check(StatusStep step,bool done) => Mutate(()=>Store.Api.SetStatusStepAsync(Id,step,done));
     Task NextRound() => Mutate(()=>Store.Api.NextRoundAsync(Id));
     static PlayerDto? NextPlayer(SessionStateDto s) { var players=s.Players.Where(p=>!p.HasPassed).OrderBy(p=>p.Initiative??99).ThenBy(p=>p.SeatOrder).ToList(); if(players.Count==0)return null; var index=players.FindIndex(p=>p.Id==s.ActivePlayerId); return players[(index+1)%players.Count]; }
-    static string Phase(GamePhase phase) => phase switch { GamePhase.Setup=>"Setup",GamePhase.Strategy=>"Strategy phase",GamePhase.Action=>"Action phase",GamePhase.Status=>"Status phase",_=>"Agenda" };
 }

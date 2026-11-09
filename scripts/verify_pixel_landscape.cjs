@@ -111,14 +111,19 @@ fs.mkdirSync(out, {recursive:true});
      }
     }
     const identity=document.querySelector('.table-identity'),header=document.querySelector('.table-top');
-    if(identity&&landscape){const ir=box(identity),hr=box(header);if(!header.contains(identity)||ir.y<hr.y-.75||ir.bottom>hr.bottom+.75)issues.push({name:'header identity',failures:['player details must fit in top row']});}
+    if(identity&&landscape){const ir=box(identity),hr=box(header);if(!header.contains(identity)||ir.y<hr.y-.75||ir.bottom>hr.bottom+.75)issues.push({name:'header identity',failures:['player details must fit inside compact header']});}
+    if(header&&document.querySelector('.play-grid')){
+     const center=document.querySelector('.turn-main'),hr=box(header),cr=box(center);
+     if(!center.contains(header)||hr.x<cr.x-.75||hr.right>cr.right+.75)issues.push({name:'central header',failures:['header must be inside middle sector']});
+    }
+    if(header?.querySelector('.wake-status')||identity&&!document.querySelector('dialog .wake-status'))issues.push({name:'wake location',failures:['wake switch must be in persistent left tools only']});
     const mutedCards=[...document.querySelectorAll('.sc-strip.available,.sc-strip.played')].map(e=>({id:e.dataset.card,filter:getComputedStyle(e).filter,strike:getComputedStyle(e.querySelector('.sc-label strong')).textDecorationLine}));
     for(const c of mutedCards)if(!c.filter.includes('grayscale(1)')||!c.strike.includes('line-through'))issues.push({name:'card visual '+c.id,failures:['unpicked/played must be gray and struck through']});
     for(const e of document.querySelectorAll('.sc-strip:not(.available):not(.played)'))if(getComputedStyle(e).filter.includes('grayscale(1)')||getComputedStyle(e.querySelector('.sc-label strong')).textDecorationLine.includes('line-through'))issues.push({name:'picked card '+e.dataset.card,failures:['unplayed picked card must stay colored and not crossed out']});
     const wake=document.querySelector('.wake-status');
     if(wake&&visible(wake)){
      const ws=getComputedStyle(wake);
-     if(wake.tagName!=='BUTTON'||wake.type!=='button'||parseFloat(ws.borderTopWidth)<1||ws.borderTopStyle==='none'||ws.backgroundColor==='rgba(0, 0, 0, 0)')issues.push({name:'Keep screen awake',failures:['must be a visibly styled button']});
+     if(wake.tagName!=='BUTTON'||wake.type!=='button'||wake.getAttribute('role')!=='switch'||parseFloat(ws.borderTopWidth)<1||ws.borderTopStyle==='none'||ws.backgroundColor==='rgba(0, 0, 0, 0)')issues.push({name:'Keep screen awake',failures:['must be a visibly styled button']});
     }
     const wheel=document.querySelector('.initiative-wheel');
     if(wheel&&landscape&&!wheel.classList.contains('wheel-moving')){

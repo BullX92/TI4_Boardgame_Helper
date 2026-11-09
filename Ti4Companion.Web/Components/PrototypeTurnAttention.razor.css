@@ -1,1 +1,10 @@
-.wake-status{display:inline-flex;align-items:center;justify-content:center;gap:5px;margin:0;min-height:44px;padding:7px 10px;border:1px solid #456687;border-radius:8px;background:#172b43;color:#dcecff;font:600 10px/1.2 system-ui;white-space:nowrap;cursor:pointer;box-shadow:inset 0 1px 0 #ffffff0d}.wake-status:hover{background:#203c5c;border-color:#6da6df}.wake-status:active{background:#102039}.wake-status:focus-visible{outline:2px solid #8cc8ff;outline-offset:2px}.wake-status.is-awake{border-color:#4b9678;background:#153b32;color:#b9f3d3}
+.wake-control { display: grid; gap: 5px; min-width: 0; }
+.wake-status { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; min-width: 0; margin: 0; min-height: 44px; padding: 7px 6px; border: 1px solid #456687; border-radius: 8px; background: #172b43; color: #dcecff; font: 600 11px/1.2 system-ui; white-space: normal; cursor: pointer; box-shadow: inset 0 1px 0 #ffffff0d; }
+.wake-status > span:first-child { flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.wake-status:hover:not(:disabled) { background: #203c5c; border-color: #6da6df; }
+.wake-status:active:not(:disabled) { background: #102039; }
+.wake-status:focus-visible { outline: 2px solid #8cc8ff; outline-offset: 2px; }
+.wake-status.is-awake { border-color: #4b9678; background: #153b32; color: #b9f3d3; }
+.wake-status:disabled { cursor: not-allowed; color: #b2bfd0; }
+.wake-value { min-width: 30px; padding: 4px 6px; border-radius: 12px; background: #ffffff12; text-align: center; font-size: 11px; }
+.wake-hint { color: #b2bfd0; font: 11px/1.4 system-ui; overflow-wrap: anywhere; }

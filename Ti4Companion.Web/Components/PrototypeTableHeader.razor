@@ -1,0 +1,37 @@
+@inherits Ti4ComponentBase
+<header class="table-top" aria-label="Table status">
+    @if (Player is {} player)
+    {
+        var fullFaction = Store.Faction(player.FactionId)?.Name ?? "Choose your faction";
+        <section class="table-identity" aria-label="Your player">
+            <div class="table-portrait" style="--seat:@player.ColorHex"><PrototypeFactionArt FactionId="@player.FactionId" Name="@fullFaction" /></div>
+            <div class="table-identity-copy">
+                <h1 title="@player.Name">@player.Name</h1><span class="identity-separator" aria-hidden="true">·</span>
+                <span class="table-faction" title="@fullFaction">@ShortFaction(player.FactionId, fullFaction)</span>
+                <span class="table-initiative" aria-label="Your initiative">Initiative @(player.Initiative?.ToString() ?? "—")</span>
+            </div>
+        </section>
+    }
+    else
+    {
+        <a class="table-home" href="/prototype.html" target="_top" aria-label="TI4-Agent Table Companion"><img src="/assets/ti4-agent/favicon.svg" width="24" height="24" alt="" /><span>TI4 · TABLE COMPANION</span></a>
+    }
+    <div class="table-meta">
+        @if (Session is {} session) { <span class="table-phase">Round @session.CurrentRound · @Phase(session.Phase)</span> }
+        <span class="table-connection">
+            @if (Session is {} connectedSession) { <span class="table-code" aria-label="Session code">@connectedSession.JoinCode</span> }
+            <span class="table-live">@(Store.Connected ? "● Live" : HasCode ? "○ Connecting" : "New session")</span>
+        </span>
+    </div>
+</header>
+@code {
+    [Parameter] public SessionStateDto? Session { get; set; }
+    [Parameter] public PlayerDto? Player { get; set; }
+    [Parameter] public bool HasCode { get; set; }
+    static string ShortFaction(string? id, string full) => id switch
+    {
+        "barony" => "Letnev",
+        _ => full.StartsWith("The ", StringComparison.Ordinal) ? full[4..] : full
+    };
+    static string Phase(GamePhase phase) => phase switch { GamePhase.Setup => "Setup", GamePhase.Strategy => "Strategy phase", GamePhase.Action => "Action phase", GamePhase.Status => "Status phase", _ => "Agenda" };
+}

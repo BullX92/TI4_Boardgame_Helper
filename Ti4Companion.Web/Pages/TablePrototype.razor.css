@@ -1,17 +1,10 @@
 .table-app{position:relative;isolation:isolate;max-width:1200px;width:100%;min-height:100dvh;margin:auto;padding:12px max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));color:#f3f4f6;font:14px/1.4 Inter,system-ui,sans-serif;box-sizing:border-box}
 /* Fixed decorative layer: no layout space, hit targets or mobile background-attachment jank. */
-.table-app::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-color:#050b17;background-image:linear-gradient(180deg,rgba(5,11,23,.32),rgba(5,11,23,.5)),url('/assets/ti4-agent/table-space-v1.jpg');background-size:cover;background-position:center;background-repeat:no-repeat}
-.table-top,.table-foot{background:rgba(5,11,23,.72)}
+.table-app::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-color:#050b17;background-image:linear-gradient(180deg,rgba(5,11,23,.32),rgba(5,11,23,.5)),url('/assets/ti4-agent/table-space-v1.jpg');background-size:cover;background-position:center;background-repeat:no-repeat}.table-foot{background:rgba(5,11,23,.72)}
 .table-app *{box-sizing:border-box}
 .table-app h1,.table-app h2,.table-app h3{font-family:inherit;letter-spacing:-.025em;line-height:1.15;color:inherit;margin:0 0 8px;text-transform:none;overflow-wrap:anywhere}
 .table-app h1{font-size:24px}.table-app h2{font-size:26px}.table-app h3{font-size:16px}
 .table-app p{color:#afbed0;margin:6px 0 10px;line-height:1.4}
-.table-top{display:flex;align-items:center;gap:14px;min-height:44px;padding-bottom:8px;border-bottom:1px solid #263040}
-.table-home{display:flex;align-items:center;gap:7px;color:#4a90d9;text-decoration:none;font-weight:750;flex:none;min-height:44px}
-.table-brand{font-size:18px;line-height:1.1;letter-spacing:-.03em}.table-brand small{display:block;color:#8e9fb7;font-size:7px;font-weight:500;letter-spacing:.15em;margin-top:3px}
-.table-meta{display:flex;align-items:center;justify-content:center;flex:1;gap:12px;font-size:11px;letter-spacing:.06em;color:#aebed3;text-transform:uppercase}.table-meta span:last-child{color:#d4af37;font-family:ui-monospace,monospace}
-.table-tools{display:flex;align-items:center;gap:6px;margin-left:auto;flex:none}.table-live{font-size:10px;color:#86dfab;white-space:nowrap}
-.table-identity{display:flex;gap:9px;align-items:center;padding:10px 0}.table-identity>div:nth-child(2){flex:1;min-width:0}.table-identity h1{font-size:19px;margin:0 0 2px}.table-identity p{font-size:12px;margin:0}.table-portrait{width:36px;height:40px;border:1px solid var(--seat);border-radius:6px;overflow:hidden;flex:none}.table-initiative{font:700 25px/1 ui-monospace,monospace;text-align:center;color:#d4af37}.table-initiative small{display:block;font:9px/1.5 system-ui;letter-spacing:.06em;color:#9ca3af}
 .play-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start}.turn-main,.play-grid aside{min-width:0}
 .table-focus,.table-panel{border:1px solid #2d3b50;background:#111827ef;border-radius:9px;padding:14px;margin-bottom:10px}.table-focus{border-top:2px solid var(--seat);display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:10px}.table-focus> :not(.turn-heading):not(.turn-clock):not(.focus-controls){grid-column:1/-1}.table-focus ::deep .turn-clock{grid-column:2;grid-row:1}.turn-heading{min-width:0}.turn-heading h2{margin:0}
 .table-kicker{color:#8ec5ff!important;font-size:10px!important;letter-spacing:.09em;font-weight:650;margin:0 0 5px!important}
@@ -24,15 +17,12 @@
 .table-app.is-my-turn{--wake-ink:#a3b9d5;color:#f3f4f6}.is-my-turn .table-focus{background:linear-gradient(135deg,#182e49,#111e31);border-color:#69b5ff;box-shadow:0 0 0 1px #4a90d926,0 8px 26px #0004}.is-my-turn .table-kicker{color:#e7c96d!important}
 @media(min-width:1000px){.table-app{padding-top:16px}.play-grid{gap:18px}.table-focus,.table-panel{padding:18px}.turn-heading h2{font-size:30px}}
 /* Portrait uses the whole width for touch controls; landscape keeps the board alongside. */
-@media(max-width:599px) and (orientation:portrait){.table-top{flex-wrap:wrap;gap:4px 10px}.table-meta{order:3;flex-basis:100%;justify-content:space-between;padding:2px 0}.table-brand{font-size:16px}.table-live{font-size:9px}.table-tools{gap:4px}.play-grid{grid-template-columns:minmax(0,1fr);gap:4px}.table-focus,.table-panel{padding:12px}.table-foot{flex-wrap:wrap}.table-identity{padding:9px 0}}
+@media(max-width:599px) and (orientation:portrait){.play-grid{grid-template-columns:minmax(0,1fr);gap:4px}.table-focus,.table-panel{padding:12px}.table-foot{flex-wrap:wrap}}
 /* Short phone viewports: use space for the game, without shrinking action targets. */
 @media(orientation:landscape) and (max-height:500px){
 .table-app{padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom));padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
-.table-top{padding-bottom:0;border-bottom:0;gap:10px}.table-home{gap:5px}.table-home img{width:23px;height:23px}.table-brand{font-size:15px}.table-brand small{display:none}.table-meta{font-size:10px;gap:10px}.table-tools{gap:5px}.table-live{font-size:9px}
-.table-identity{padding:0 0 1px;gap:7px}.table-identity>div:nth-child(2){display:flex;align-items:center;gap:8px}.table-portrait{width:28px;height:30px}.table-identity h1{font-size:16px;margin:0}.table-identity p{font-size:11px}.table-initiative{display:flex;align-items:center;gap:6px;font-size:21px}.table-initiative small{font-size:8px}
 .play-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:10px}.table-focus,.table-panel{padding:8px;margin-bottom:6px}.table-focus{padding:6px;row-gap:4px}.turn-heading h2{font-size:24px}.table-kicker{font-size:9px!important;margin-bottom:3px!important}.own-cards{gap:6px}.table-app .own-cards button{padding:5px 8px;font-size:12px}.own-cards button span{font-size:9px;margin-bottom:1px}.workflow p,.waiting-message{font-size:12px}.workflow{padding-top:6px}.workflow h3{font-size:14px}.workflow button{margin-top:3px}.table-foot{margin-top:4px;font-size:9px}
 }
-@media(orientation:landscape) and (max-width:700px){.table-brand{display:none}.table-meta{gap:7px}.table-tools{gap:4px}.table-initiative small{display:none}}
 
 @media(orientation:landscape) and (max-height:500px){
 .table-focus:has(> .own-cards > button:only-child){grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -55,11 +45,7 @@
 }
 /* Viewport-bound landscape shell. Only explicitly labelled auxiliary lists scroll. */
 @media (orientation:landscape) and (min-width:800px){
-.table-app{height:100dvh;min-height:0;display:flex;flex-direction:column;gap:4px;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom))}
-.table-top,.table-identity,.table-foot{flex:none;min-width:0}
-.table-top{padding-bottom:0;min-height:44px}
-.table-identity{padding:0;min-height:30px}.table-identity h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.table-identity p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.table-identity>div:nth-child(2){overflow:hidden}.table-foot{margin:0;min-height:14px;line-height:14px}
+.table-app{height:100dvh;min-height:0;display:flex;flex-direction:column;gap:4px;padding-top:max(4px,env(safe-area-inset-top));padding-bottom:max(4px,env(safe-area-inset-bottom))}.table-foot{flex:none;min-width:0}.table-foot{margin:0;min-height:14px;line-height:14px}
 .play-grid{flex:1;min-height:0;align-items:stretch;gap:10px}
 .turn-main{min-height:0;display:flex;flex-direction:column;gap:4px}.play-grid aside{min-height:0}
 .table-focus,.pick-console{flex:none;margin:0}.table-focus{row-gap:4px;padding:6px}.table-focus h2{font-size:22px}.table-focus .table-kicker{margin:0!important}
@@ -79,30 +65,15 @@
 /* Native 2400 × 1080 landscape viewports use the available width, with no 1200px letterbox. */
 @media(min-width:1600px) and (orientation:landscape){
 .table-app{max-width:2400px;padding-top:18px;padding-right:22px;font-size:18px}.table-app.has-tools{padding-left:72px}
-.table-top{min-height:56px;padding-bottom:10px}.table-home img{width:36px;height:36px}.table-brand{font-size:28px}.table-brand small{font-size:10px}.table-meta{font-size:16px;gap:24px}.table-live{font-size:14px}
-.table-identity{padding:12px 0;gap:12px}.table-portrait{width:48px;height:54px}.table-identity h1{font-size:24px}.table-identity p{font-size:16px}.table-initiative{font-size:34px}.table-initiative small{font-size:12px}
 .play-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px}.table-focus,.table-panel{padding:20px}.turn-heading h2{font-size:40px}.table-kicker{font-size:13px!important}
 .table-app button{font-size:18px;min-height:52px}.table-app .own-cards button{font-size:18px}.own-cards button span{font-size:12px}.workflow h3{font-size:24px}.workflow p{font-size:18px}.workflow p.secondary-progress,.workflow p.secondary-done,.workflow p.primary-done{font-size:15px}.table-foot{font-size:13px}
 .focus-controls ::deep .turn-clock strong{font-size:36px}.focus-controls ::deep .turn-clock span{font-size:12px}
 }
-/* Three-zone game surface; identity belongs to the header, never another body row. */
+/* Three-zone game surface; the compact header lives inside the central turn column. */
 .play-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"actions" "order" "strategy"}
 .order-zone{grid-area:order;min-width:0}.turn-main{grid-area:actions}.strategy-zone{grid-area:strategy}
-.table-top:has(.table-identity){display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:4px 8px;align-items:center}
-.table-top:has(.table-identity) .table-home{grid-column:1;grid-row:1;justify-content:center}
-.table-top:has(.table-identity) .table-brand{display:none}
-.table-top .table-identity{grid-column:2;grid-row:1;min-width:0;padding:0;gap:6px;max-width:300px}
-.table-top .table-identity>div:nth-child(2){display:block;min-width:0;overflow:hidden}
-.table-top .table-identity h1{font-size:14px;line-height:17px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.table-top .table-identity p{font-size:10px;line-height:14px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.table-top .table-portrait{width:26px;height:30px}.table-top .table-initiative{display:block;font-size:20px;line-height:21px}.table-top .table-initiative small{display:block;font-size:7px;line-height:9px}
-.table-top:has(.table-identity) .table-meta{grid-column:2/-1;grid-row:2;order:0;padding:0;justify-content:flex-start;gap:8px;font-size:9px}
-.table-top:has(.table-identity) .table-tools{grid-column:3;grid-row:1;margin:0;gap:4px}
 @media(orientation:landscape) and (max-width:799px){.play-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"actions strategy" "order strategy"}}
 @media(orientation:landscape) and (min-width:800px){
-.table-top:has(.table-identity){grid-template-columns:44px minmax(130px,1fr) auto auto;gap:8px;min-height:44px;padding:0}
-.table-top:has(.table-identity) .table-meta{grid-column:3;grid-row:1;white-space:nowrap;gap:8px;font-size:9px}
-.table-top:has(.table-identity) .table-tools{grid-column:4;grid-row:1}
 .play-grid{grid-template-columns:minmax(0,.72fr) minmax(0,1.1fr) minmax(0,1.18fr);grid-template-areas:"order actions strategy";gap:8px;align-items:stretch}
 .order-zone{display:flex;flex-direction:column;border:1px solid #273247;border-radius:9px;padding:6px;min-height:0;background:#0b1423;isolation:isolate;z-index:1}
 .turn-main{justify-content:flex-start;gap:4px}.table-focus{grid-template-columns:minmax(0,1fr) auto;column-gap:4px;row-gap:4px;padding:6px}
@@ -115,8 +86,5 @@
 .own-cards{grid-template-columns:minmax(0,1fr)}.table-app .own-cards button{font-size:12px}.workflow button{min-width:100px}.workflow ::deep .speaker-picker{min-width:130px}
 .pick-console{grid-template-columns:minmax(0,1fr);padding:5px}.pick-console h2{font-size:16px;grid-column:1;grid-row:1}.pick-progress{grid-column:1;grid-row:2}.pick-console>.table-primary{grid-column:1;grid-row:4;max-width:none}.table-card-grid{grid-row:3;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.table-card-grid button{font-size:10px;padding:3px}
 }
-@media(orientation:landscape) and (min-width:1600px){
-.table-top:has(.table-identity){grid-template-columns:54px minmax(220px,1fr) auto auto;gap:18px;min-height:56px}
-.table-top .table-identity{max-width:430px;gap:10px}.table-top .table-identity h1{font-size:20px;line-height:25px}.table-top .table-identity p{font-size:14px;line-height:19px}.table-top .table-portrait{width:38px;height:46px}.table-top .table-initiative{font-size:27px;line-height:30px}.table-top .table-initiative small{font-size:9px;line-height:12px}
-.table-top:has(.table-identity) .table-meta{font-size:15px;gap:18px}.play-grid{gap:18px}.table-focus{padding:14px;row-gap:10px}.table-focus h2{font-size:30px}.focus-controls ::deep .turn-clock strong{font-size:28px}.own-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.pick-console h2{font-size:24px}.table-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.table-card-grid button{font-size:16px}
+@media(orientation:landscape) and (min-width:1600px){.play-grid{gap:18px}.table-focus{padding:14px;row-gap:10px}.table-focus h2{font-size:30px}.focus-controls ::deep .turn-clock strong{font-size:28px}.own-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.pick-console h2{font-size:24px}.table-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.table-card-grid button{font-size:16px}
 }
