@@ -129,6 +129,11 @@ fs.mkdirSync(out, {recursive:true});
     if(wheel&&landscape&&!wheel.classList.contains('wheel-moving')){
      const stage=box(wheel.querySelector('.wheel-stage'));
      for(const e of wheel.querySelectorAll('.wheel-slot[aria-hidden="false"] .wheel-label')){const r=box(e);if(r.x<stage.x-.75||r.right>stage.right+.75||r.y<stage.y-.75||r.bottom>stage.bottom+.75)issues.push({name:'wheel label '+e.textContent.trim(),failures:['name clipped inside wheel stage']});}
+     if(wheel.dataset.wheelLayout==='vertical'){
+      const figures=[...wheel.querySelectorAll('.wheel-slot[aria-hidden="false"]')].sort((a,b)=>Number(a.dataset.rank)-Number(b.dataset.rank)).map(e=>({rank:Number(e.dataset.rank),...box(e.querySelector('.wheel-figure'))}));
+      for(const f of figures)if(f.x<stage.x-2||f.right>stage.right+2||f.y<stage.y-2||f.bottom>stage.bottom+2)issues.push({name:'Holo figure '+f.rank,failures:['figure clipped inside stage']});
+      if(stage.height>=240&&figures.length>=2&&(figures[0].height<=90||figures[1].height<=55))issues.push({name:'Holo fill',failures:['current/next must grow into available space']});
+     }
     }
     if(wheel&&['1.3','1800','0.35','80'].some((v,i)=>wheel.dataset[['depth','duration','glow','originalColors'][i]]!==v))issues.push({name:'wheel',failures:['hologram settings changed']});
     const documentSize=[document.documentElement.scrollWidth,document.documentElement.scrollHeight];

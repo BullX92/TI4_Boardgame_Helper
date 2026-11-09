@@ -1,10 +1,15 @@
-.table-top{display:flex;flex-direction:column;gap:3px;flex:none;min-width:0;padding:5px 6px;border:1px solid #2a3a50;border-radius:8px;background:rgba(5,11,23,.86);color:#e8eff9;font:11px/1.25 Inter,system-ui,sans-serif}
-.table-identity{display:flex;align-items:center;gap:6px;min-width:0}
-.table-portrait{width:26px;height:30px;flex:none;overflow:hidden;border:1px solid var(--seat,#4a90d9);border-radius:5px}
-.table-identity-copy{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
-.table-identity h1{font:700 13px/17px Inter,system-ui,sans-serif;margin:0;max-width:40%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f3f6fc;letter-spacing:0}
-.identity-separator{color:#8193aa;flex:none}.table-faction{font-size:11px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b6c8dd}
-.table-initiative{font-size:10px;font-weight:500;white-space:nowrap;flex:none;color:#aebfd3}
-.table-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}.table-phase{font-size:10px;font-weight:600;color:#cbd9e9}.table-connection{display:flex;align-items:center;gap:5px;flex:none;font-size:8px;color:#8299b4}.table-code{font:8px/1.25 ui-monospace,monospace;color:inherit}.table-live{font-size:8px;white-space:nowrap}
+.table-top{--header-scale:1;display:flex;flex-direction:column;gap:calc(3px * var(--header-scale));flex:none;min-width:0;padding:calc(5px * var(--header-scale)) calc(6px * var(--header-scale));border:calc(1px * var(--header-scale)) solid #2a3a50;border-radius:calc(8px * var(--header-scale));background:rgba(5,11,23,.86);color:#e8eff9;font:calc(11px * var(--header-scale))/1.25 Inter,system-ui,sans-serif}
+.table-top:has(.table-identity){--header-scale:1.5}
+.table-identity{display:flex;align-items:center;gap:calc(6px * var(--header-scale));min-width:0}
+.table-portrait{width:calc(26px * var(--header-scale));height:calc(30px * var(--header-scale));flex:none;overflow:hidden;border:1px solid var(--seat,#4a90d9);border-radius:calc(5px * var(--header-scale))}
+.table-identity-copy{display:flex;align-items:center;gap:calc(4px * var(--header-scale));flex:1;min-width:0}
+.table-identity h1{font:700 calc(13px * var(--header-scale))/calc(17px * var(--header-scale)) Inter,system-ui,sans-serif;margin:0;max-width:35%;min-width:1.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f3f6fc;letter-spacing:0}
+.identity-separator{color:#8193aa;flex:none}.table-faction{font-size:calc(11px * var(--header-scale));flex:1;min-width:2.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b6c8dd}
+.table-initiative{font-size:calc(10px * var(--header-scale));font-weight:500;white-space:nowrap;flex:none;color:#aebfd3}
+.table-meta{display:flex;align-items:center;justify-content:space-between;gap:calc(6px * var(--header-scale));min-width:0}.table-phase{font-size:calc(10px * var(--header-scale));font-weight:600;color:#cbd9e9}
+/* Room and connection details stay secondary rather than growing with the identity. */
+.table-connection{display:flex;align-items:center;gap:5px;flex:none;font-size:8px;color:#8299b4}.table-code{font:8px/1.25 ui-monospace,monospace;color:inherit}.table-live{font-size:8px;white-space:nowrap}
 .table-home{display:inline-flex;align-items:center;gap:7px;min-height:44px;min-width:44px;width:fit-content;color:#91b8df;text-decoration:none;font-weight:650}.table-home img{flex:none}.table-home span{font-size:12px}
-@media(orientation:landscape) and (min-width:1600px){.table-top{padding:9px 12px;gap:6px}.table-portrait{width:34px;height:38px}.table-identity h1{font-size:18px;line-height:22px}.table-faction{font-size:15px}.table-initiative{font-size:14px}.table-phase{font-size:14px}.table-code,.table-live,.table-connection{font-size:11px}}
+/* In narrower landscape columns, stack only the secondary code/status to keep the round on one line. */
+@media(orientation:landscape) and (max-width:850px){.table-connection{display:grid;gap:0;justify-items:end}}
+@media(orientation:landscape) and (min-width:1600px){.table-top{padding:calc(9px * var(--header-scale)) calc(12px * var(--header-scale));gap:calc(6px * var(--header-scale))}.table-portrait{width:calc(34px * var(--header-scale));height:calc(38px * var(--header-scale))}.table-identity h1{font-size:calc(18px * var(--header-scale));line-height:calc(22px * var(--header-scale))}.table-faction{font-size:calc(15px * var(--header-scale))}.table-initiative{font-size:calc(14px * var(--header-scale))}.table-phase{font-size:calc(14px * var(--header-scale))}.table-code,.table-live,.table-connection{font-size:11px}}

@@ -41,5 +41,9 @@
 @media(orientation:landscape) and (min-width:800px){
 .initiative-wheel{flex:1;min-height:44px;margin:0;display:flex;flex-direction:column;z-index:1}.wheel-heading{flex:none;height:16px;line-height:14px;font-size:9px}.wheel-stage{flex:1;min-height:28px;height:auto}.wheel-roster{top:0;left:0;right:0}.wheel-roster>summary{padding:0;align-items:center;min-width:80px}.wheel-roster-list{position:absolute;left:0;right:0;top:44px;bottom:auto;width:100%;max-height:min(260px,calc(100dvh - 120px))}.wheel-disc{height:100%;top:0}
 }
+/* JS reserves exactly 16px per full-width vertical name row, independent of viewport typography. */
+.initiative-wheel[data-wheel-layout="vertical"] .wheel-label{font-size:12px;line-height:16px;height:16px}
+.initiative-wheel[data-wheel-layout="vertical"] .wheel-label>b{font-size:13px;line-height:16px}
+.initiative-wheel[data-wheel-layout="vertical"] .wheel-plinth{bottom:0}
 @media(prefers-reduced-motion:reduce){.wheel-motion .wheel-figure,.wheel-motion .wheel-label,.wheel-motion .wheel-disc{transition:none!important}.wheel-moving .wheel-scan{animation:none!important}}
 @media(min-width:1600px) and (orientation:landscape){.initiative-wheel{--wheel-hero-height:190;margin-top:14px}.wheel-heading{font-size:13px;height:22px}.wheel-stage{height:214px}.wheel-disc{top:83px;height:214px}.wheel-label{font-size:16px;line-height:20px}.wheel-label>b{font-size:17px;line-height:20px}.wheel-roster{font-size:12px}}

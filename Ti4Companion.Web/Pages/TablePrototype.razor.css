@@ -69,6 +69,16 @@
 .table-app button{font-size:18px;min-height:52px}.table-app .own-cards button{font-size:18px}.own-cards button span{font-size:12px}.workflow h3{font-size:24px}.workflow p{font-size:18px}.workflow p.secondary-progress,.workflow p.secondary-done,.workflow p.primary-done{font-size:15px}.table-foot{font-size:13px}
 .focus-controls ::deep .turn-clock strong{font-size:36px}.focus-controls ::deep .turn-clock span{font-size:12px}
 }
+/* Below the three-zone breakpoint, give the decorative order preview only the height left by controls. */
+@media(orientation:landscape) and (min-width:600px) and (max-width:799px) and (max-height:500px){
+.table-app.has-tools:has(.play-grid){height:100dvh;min-height:0;display:flex;flex-direction:column;gap:4px}
+.table-app.has-tools:has(.play-grid) .play-grid{flex:1;min-height:0;grid-template-rows:auto minmax(0,1fr);align-items:stretch}
+.table-app.has-tools:has(.play-grid) .table-foot{flex:none;margin:0;min-height:14px;line-height:14px}
+.order-zone{min-height:0;display:flex;flex-direction:column}
+.order-zone ::deep .initiative-wheel{flex:1;min-height:0;display:flex;flex-direction:column;margin:0}
+.order-zone ::deep .wheel-heading{flex:none}
+.order-zone ::deep .wheel-stage{flex:1;min-height:28px;height:auto}
+}
 /* Three-zone game surface; the compact header lives inside the central turn column. */
 .play-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"actions" "order" "strategy"}
 .order-zone{grid-area:order;min-width:0}.turn-main{grid-area:actions}.strategy-zone{grid-area:strategy}

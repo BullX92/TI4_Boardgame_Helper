@@ -13,7 +13,7 @@ function draw(state, animate, previousRanks = new Map()) {
     if (!width || !root.isConnected) return;
     const preferredHeight = Number.parseFloat(getComputedStyle(root).getPropertyValue('--wheel-hero-height')) || 76;
     // Shrink decorative artwork before controls; labels stay inside the real stage.
-    const heroHeight = Math.max(8, Math.min(preferredHeight, stage.clientHeight - 20));
+    const heroHeight = Math.max(0, Math.min(preferredHeight, stage.clientHeight - 20));
     const scale = heroHeight / 100;
     const depth = number(root, 'depth', 1.3);
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || document.visibilityState !== 'visible';
@@ -28,13 +28,34 @@ function draw(state, animate, previousRanks = new Map()) {
     const span = Math.min(width, Math.max(440, heroHeight * 4));
     const inset = (width - span) / 2;
     const gap = Math.min(12, heroHeight / 3);
-    const vertical = width < 420 && stage.clientHeight > width * .95;
+    const slots = Array.from(root.querySelectorAll('.wheel-slot'));
+    const visibleCount = slots.filter(s => Number(s.dataset.rank) >= 0 && Number(s.dataset.rank) < 3).length;
+    // Vertical artwork can shrink to zero, but each label still needs its full row.
+    const vertical = width < 420 && stage.clientHeight > width * .95 && stage.clientHeight >= visibleCount * 16;
     root.dataset.wheelLayout = vertical ? 'vertical' : 'horizontal';
-    const positions = vertical ? [
-        { x: .5, bottom: heroHeight, scale: 1, yaw: 0, z: 8 },
-        { x: .5, bottom: heroHeight + (stage.clientHeight - 20 - heroHeight) / 2, scale: .68 / depth, yaw: -14, z: 0 },
-        { x: .5, bottom: stage.clientHeight - 20, scale: .43 / depth, yaw: -25, z: -12 }
-    ] : [
+    let verticalPositions = [];
+    if (vertical && visibleCount) {
+        // Reserve readable, full-width label rows before allocating art. The third
+        // player is a compact portrait; the first two share all remaining height.
+        // 0.96 includes the 80px picture's decorative horizontal overhang at 100px.
+        const spare = Math.max(0, stage.clientHeight - visibleCount * 16);
+        const padding = Math.min(4, spare / 8);
+        const rowGap = Math.min(3, spare / 12);
+        const labelGap = Math.min(2, spare / 12);
+        const budget = Math.max(0, spare - 2 * padding - (visibleCount - 1) * rowGap - visibleCount * labelGap);
+        const widthCap = Math.max(0, (width - 16) / .96);
+        const third = visibleCount === 3 ? Math.min(24, budget * .16, widthCap) : 0;
+        const ratio = .936 / Math.max(.1, depth);
+        const active = Math.min(widthCap, (budget - third) / (visibleCount > 1 ? 1 + ratio : 1));
+        const heights = [active, Math.min(widthCap, active * ratio), third];
+        let top = padding;
+        verticalPositions = heights.slice(0, visibleCount).map((height, rank) => {
+            const bottom = top + height;
+            top = bottom + labelGap + 16 + rowGap;
+            return { x: .5, bottom, height, labelY: bottom + labelGap, yaw: [0, -14, -25][rank], z: [0, 0, -12][rank] };
+        });
+    }
+    const positions = vertical ? verticalPositions : [
         { x: .20, bottom: heroHeight, scale: 1, yaw: 0, z: 8 },
         { x: .44, bottom: heroHeight - gap, scale: .68 / depth, yaw: -14, z: 0 },
         { x: .64, bottom: heroHeight - gap * 2, scale: .43 / depth, yaw: -25, z: -12 }
@@ -57,14 +78,15 @@ function draw(state, animate, previousRanks = new Map()) {
         const label = slot.querySelector('.wheel-label');
         figure.style.left = '0';
         figure.style.top = '0';
-        figure.style.transform = `translate3d(${x - 40}px,${p.bottom - 100}px,${p.z}px) scale(${scale * p.scale}) rotateY(${p.yaw}deg)`;
+        const figureScale = visible && vertical ? p.height / 100 : scale * p.scale;
+        figure.style.transform = `translate3d(${x - 40}px,${p.bottom - 100}px,${p.z}px) scale(${figureScale}) rotateY(${p.yaw}deg)`;
         figure.style.opacity = visible ? [1, .92, .84][rank] : 0;
         figure.style.zIndex = String(10 - Math.max(0, rank));
-        const labelWidth = vertical ? Math.min(190, width - 8) : Math.min(102, span * .31);
+        const labelWidth = vertical ? Math.max(0, width - 8) : Math.min(102, span * .31);
         label.style.left = '0';
         label.style.top = '0';
         label.style.width = `${labelWidth}px`;
-        label.style.transform = `translate(${x - labelWidth / 2}px,${p.bottom + 3}px)`;
+        label.style.transform = `translate(${x - labelWidth / 2}px,${visible && vertical ? p.labelY : p.bottom + 3}px)`;
         label.style.opacity = visible ? [1, .9, .8][rank] : 0;
         label.style.zIndex = String(20 - Math.max(0, rank));
     }

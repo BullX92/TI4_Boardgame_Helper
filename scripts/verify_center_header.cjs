@@ -49,13 +49,21 @@ const out = process.env.TI4_EVIDENCE_DIR || '/evidence';
         page.on('response', r => {if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`);});
         await page.goto(base + '/table/' + session.joinCode);
         await page.locator('.table-identity').waitFor();
-        for (const [width, height] of [[915, 412], [915, 320], [800, 360], [412, 915]]) {
+        for (const [width, height] of [[915, 412], [915, 320], [800, 360], [740, 360], [667, 375], [640, 360], [412, 915]]) {
             await page.setViewportSize({width, height});
+            await page.waitForTimeout(100); // Let ResizeObserver settle after rotation.
             const geometry = await page.evaluate(() => {
                 const header = document.querySelector('.table-top'), center = document.querySelector('.turn-main');
                 const initiative = document.querySelector('.table-initiative');
+                const portrait = document.querySelector('.table-portrait').getBoundingClientRect();
+                const stage = document.querySelector('.wheel-stage').getBoundingClientRect();
+                const figures = [...document.querySelectorAll('.wheel-slot')].filter(e => Number(e.dataset.rank) >= 0 && Number(e.dataset.rank) < 3).sort((a,b) => Number(a.dataset.rank)-Number(b.dataset.rank)).map(e => {
+                    const r=e.querySelector('.wheel-figure').getBoundingClientRect();
+                    return {rank:Number(e.dataset.rank),height:r.height,width:r.width,bounded:r.x>=stage.x-2&&r.right<=stage.right+2&&r.y>=stage.y-2&&r.bottom<=stage.bottom+2};
+                });
                 const h = header.getBoundingClientRect(), c = center.getBoundingClientRect();
                 return {inCenter: center.contains(header), onlyHeader: document.querySelectorAll('.table-top').length === 1,
+                    portrait:[portrait.width,portrait.height],nameFont:parseFloat(getComputedStyle(document.querySelector('.table-identity h1')).fontSize),stage:[stage.width,stage.height],figures,
                     headerHeight: h.height, bounded: h.x >= c.x - 1 && h.right <= c.right + 1,
                     initiativeFont: parseFloat(getComputedStyle(initiative).fontSize), initiative: initiative.textContent,
                     faction: document.querySelector('.table-faction')?.textContent,
@@ -63,7 +71,12 @@ const out = process.env.TI4_EVIDENCE_DIR || '/evidence';
                     documentFits: innerWidth < innerHeight || document.documentElement.scrollHeight <= innerHeight + 1};
             });
             assert.ok(geometry.inCenter && geometry.onlyHeader && geometry.bounded, 'Header must exist only inside the central sector');
-            assert.ok(geometry.headerHeight <= 68 && geometry.initiativeFont <= 14, 'Identity/initiative must be compact');
+            assert.ok(Math.abs(geometry.headerHeight-57.5*1.5)<2 && geometry.initiativeFont===10*1.5 && geometry.nameFont===13*1.5, 'Header must grow 50% from measured baseline, not merely add empty padding: '+JSON.stringify({width,height,...geometry}));
+            assert.deepEqual(geometry.portrait,[26*1.5,30*1.5]);
+            if(width>height&&width>=800){
+                assert.ok(geometry.figures.every(f=>f.bounded),'All Holo figures must remain inside their real stage');
+                assert.ok(geometry.figures[0].height>90 && geometry.figures[1].height>55,'Current and next Holo must use more available vertical space');
+            }
             assert.match(geometry.initiative, /Initiative\s*3/);
             assert.equal(geometry.faction, 'Letnev');
             assert.ok(geometry.wakeInTools && !geometry.wakeInHeader, 'Wake control must be in left tools, not header');
